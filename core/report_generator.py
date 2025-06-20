@@ -18,8 +18,8 @@ class ReportGenerator:
         os.makedirs(self.run_dir, exist_ok=True)
         self.screenshots_dir = os.path.join(self.run_dir, "screenshots")
         os.makedirs(self.screenshots_dir, exist_ok=True)
-        self.json_path = os.path.join(self.run_dir, "result.json")
-        self.pdf_path = os.path.join(self.run_dir, "report.pdf")
+        self.json_path = os.path.join(self.run_dir, f"cucumber.json")
+        self.pdf_path = os.path.join(self.run_dir, f"{timestamp}.pdf")
         # Prepare PDF canvas
         self.c = canvas.Canvas(self.pdf_path, pagesize=letter)
         self.width, self.height = letter
@@ -27,20 +27,20 @@ class ReportGenerator:
         # Storage for results
         self.results = []
 
-    def record(self, name, status, duration, screenshot_path=None):
+    def record(self, name, status, duration, screenshot_paths=[]):
         # Store result data and copy screenshot if provided
-        rel_screenshot = None
-        if screenshot_path and os.path.exists(screenshot_path):
-            filename = os.path.basename(screenshot_path)
-            dest = os.path.join(self.screenshots_dir, filename)
-            with open(screenshot_path, 'rb') as src, open(dest, 'wb') as dst:
-                dst.write(src.read())
-            rel_screenshot = os.path.join('screenshots', filename)
+        # rel_screenshot = None
+        # if screenshot_path and os.path.exists(screenshot_path):
+        #     filename = os.path.basename(screenshot_path)
+        #     dest = os.path.join(self.screenshots_dir, filename)
+        #     with open(screenshot_path, 'rb') as src, open(dest, 'wb') as dst:
+        #         dst.write(src.read())
+        #     rel_screenshot = os.path.join('screenshots', filename)
         self.results.append({
             "name": name,
             "status": status,
             "duration": duration,
-            "screenshot": rel_screenshot
+            "screenshot": screenshot_paths
         })
 
     def save_json(self):
@@ -76,13 +76,14 @@ class ReportGenerator:
             self.c.drawString(x, self.y, item['status']); x += 150
             self.c.drawString(x, self.y, f"{item['duration']:.2f}s"); x += 150
             if item['screenshot']:
-                # Embed thumbnail
-                img_path = os.path.join(self.run_dir, item['screenshot'])
-                try:
-                    img = ImageReader(img_path)
-                    self.c.drawImage(img, x, self.y-30, width=80, height=60)
-                except Exception:
-                    self.c.drawString(x, self.y, "[img]")
+                for screenshot in item['screenshot']:
+                    # Embed thumbnail
+                    img_path = os.path.join(self.run_dir, screenshot)
+                    try:
+                        img = ImageReader(img_path)
+                        self.c.drawImage(img, x, self.y-30, width=80, height=60)
+                    except Exception:
+                        self.c.drawString(x, self.y, "[img]")
             self.y -= 80
 
     def finalize(self, suite_path):

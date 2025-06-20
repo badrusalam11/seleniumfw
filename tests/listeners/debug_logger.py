@@ -1,17 +1,17 @@
 from core.listener_manager import (
     BeforeTestSuite,
     AfterTestSuite,
-    BeforeTestCase,
-    AfterTestCase
+    BeforeScenario,
+    AfterScenario
 )
 
-@BeforeTestCase
+@BeforeScenario
 def before_case(context, scenario):
-    print(f"[BeforeTestCase] {scenario.name}")
+    print(f"[BeforeScenario] {scenario.name}")
 
-@AfterTestCase
+@AfterScenario
 def after_case(context, scenario):
-    print(f"[AfterTestCase] {scenario.name}")
+    print(f"[AfterScenario] {scenario.name}")
 
 @BeforeTestSuite
 def before_suite(suite_path):

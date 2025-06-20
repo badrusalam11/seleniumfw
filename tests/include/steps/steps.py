@@ -12,7 +12,7 @@ def step_open_login(context):
     # context.driver = webdriver.Chrome(options=options)
     context.driver = BrowserFactory.create_driver()
     context.driver.get("https://katalon-demo-cura.herokuapp.com/")
-    # context.driver.maximize_window()
+    context.driver.maximize_window()
 
 @when('the user clicks on Make Appointment')
 def step_click_make_appointment(context):
@@ -25,6 +25,7 @@ def step_username(context, username):
 @when('the user enters password "{password}"')
 def step_password(context, password):
     context.driver.find_element("id", "txt-password").send_keys(password)
+    context.driver.save_screenshot("login_form.png")
 
 @when('the user clicks login')
 def step_login(context):

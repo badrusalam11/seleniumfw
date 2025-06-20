@@ -26,11 +26,11 @@ def AfterTestSuite(func):
     enabled_listeners['after_test_suite'].append(func)
     return func
 
-def BeforeTestCase(func):
+def BeforeScenario(func):
     enabled_listeners['before_scenario'].append(func)
     return func
 
-def AfterTestCase(func):
+def AfterScenario(func):
     enabled_listeners['after_scenario'].append(func)
     return func
 
