@@ -10,6 +10,10 @@ class ReportGenerator:
     def __init__(self, base_dir="reports"):
         # Create a timestamped folder for this run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # if base_dir does not exist, create it
+        if not os.path.exists(base_dir):
+            print(f"Creating reports folder: {base_dir}")
+            os.makedirs(base_dir)
         self.run_dir = os.path.join(base_dir, timestamp)
         os.makedirs(self.run_dir, exist_ok=True)
         self.screenshots_dir = os.path.join(self.run_dir, "screenshots")

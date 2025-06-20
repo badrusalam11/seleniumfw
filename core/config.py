@@ -1,10 +1,36 @@
+# File: core/config.py
 import os
 from dotenv import load_dotenv
+import glob
 
 class Config:
-    def __init__(self, env_file=".env"):
+    def __init__(self, env_file=".env", properties_dir="settings"):
+        # Load .env first
         load_dotenv(env_file)
-        self.environment = os.getenv("ENV", "dev")
+        # Load all .properties files in settings/ directory
+        self.properties = {}
+        if os.path.isdir(properties_dir):
+            for filepath in glob.glob(os.path.join(properties_dir, "*.properties")):
+                self._load_properties_file(filepath)
+
+    def _load_properties_file(self, filepath):
+        with open(filepath, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                self.properties[key.strip()] = val.strip()
 
     def get(self, key, default=None):
+        # 1) Try properties files
+        if key in self.properties:
+            return self.properties[key]
+        # 2) Fallback to environment variables
         return os.getenv(key, default)
+
+    def get_list(self, key, default=None, sep=";"):
+        raw = self.get(key, "")
+        if not raw:
+            return default or []
+        return [item.strip() for item in raw.split(sep) if item.strip()]

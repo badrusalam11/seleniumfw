@@ -3,13 +3,16 @@ from selenium.webdriver.chrome.options import Options
 from behave import given, when, then
 from selenium import webdriver
 
+from core.browser_factory import BrowserFactory
+
 @given('the user opens the login page')
 def step_open_login(context):
-    options = Options()
-    options.add_argument("--incognito")
-    context.driver = webdriver.Chrome(options=options)
+    # options = Options()
+    # options.add_argument("--incognito")
+    # context.driver = webdriver.Chrome(options=options)
+    context.driver = BrowserFactory.create_driver()
     context.driver.get("https://katalon-demo-cura.herokuapp.com/")
-    context.driver.maximize_window()
+    # context.driver.maximize_window()
 
 @when('the user clicks on Make Appointment')
 def step_click_make_appointment(context):
