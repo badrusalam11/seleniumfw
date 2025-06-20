@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Current Test File",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      // either hard‑code your venv path:
+      // "runtimeExecutable": "${workspaceFolder}/venv/Scripts/python.exe"
+      // or let VS Code pick the active interpreter:
+      "runtimeExecutable": "${command:python.interpreterPath}"
+    }
+  ]
+}

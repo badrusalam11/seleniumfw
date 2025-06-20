@@ -1,2 +1,2 @@
 test_cases:
-  - test_login.py
+  - tests\cases\test_login.py

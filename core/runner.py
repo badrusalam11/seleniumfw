@@ -14,8 +14,7 @@ class Runner:
 
     def run_case(self, case_path):
         self.logger.info(f"Running test case: {case_path}")
-        full_path = os.path.join("tests", "cases", case_path)
-        mod = self.loader.load_module_from_path(full_path)
+        mod = self.loader.load_module_from_path(case_path)
         if hasattr(mod, "run"):
             mod.run()
         else:
