@@ -31,6 +31,18 @@ def step_login(context):
 @then('the user should see the dashboard')
 def step_dashboard(context):
     element = context.driver.find_element("xpath", "//h2[normalize-space()='Make Appointment']")
+    context.driver.save_screenshot("dashboard.png")
+    
     assert element.is_displayed()
+    context.driver.quit()
+    
+@then('the user should see the error message "{error_message}"')
+def step_error_message(context, error_message):
+    element = context.driver.find_element("xpath", "//p[@class='lead text-danger']")
+    context.driver.save_screenshot("error_message.png")
+    
+    # get error message text
+    assert element.is_displayed()
+    assert error_message in element.text
 
     context.driver.quit()
