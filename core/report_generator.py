@@ -27,20 +27,14 @@ class ReportGenerator:
         # Storage for results
         self.results = []
 
-    def record(self, name, status, duration, screenshot_paths=[]):
-        # Store result data and copy screenshot if provided
-        # rel_screenshot = None
-        # if screenshot_path and os.path.exists(screenshot_path):
-        #     filename = os.path.basename(screenshot_path)
-        #     dest = os.path.join(self.screenshots_dir, filename)
-        #     with open(screenshot_path, 'rb') as src, open(dest, 'wb') as dst:
-        #         dst.write(src.read())
-        #     rel_screenshot = os.path.join('screenshots', filename)
+    def record(self, feature, scenario, status, duration, screenshot_paths=[], steps_info=None):
         self.results.append({
-            "name": name,
+            "feature": feature,
+            "scenario": scenario,
             "status": status,
             "duration": duration,
-            "screenshot": screenshot_paths
+            "screenshot": screenshot_paths,
+            "steps": steps_info 
         })
 
     def save_json(self):
@@ -72,7 +66,7 @@ class ReportGenerator:
                 self.c.showPage()
                 self.y = self.height - 50
             x = 50
-            self.c.drawString(x, self.y, item['name']); x += 150
+            self.c.drawString(x, self.y, item['scenario']); x += 150
             self.c.drawString(x, self.y, item['status']); x += 150
             self.c.drawString(x, self.y, f"{item['duration']:.2f}s"); x += 150
             if item['screenshot']:

@@ -13,7 +13,9 @@ enabled_listeners = {
     'before_feature': [],
     'after_feature': [],
     'before_scenario': [],
-    'after_scenario': []
+    'after_scenario': [],
+    'before_step': [],
+    'after_step': []
 }
 
 # Decorators for users to register hooks
@@ -32,6 +34,14 @@ def BeforeScenario(func):
 
 def AfterScenario(func):
     enabled_listeners['after_scenario'].append(func)
+    return func
+
+def BeforeStep(func):
+    enabled_listeners['before_step'].append(func)
+    return func
+
+def AfterStep(func):
+    enabled_listeners['after_step'].append(func)
     return func
 
 # Auto-discover listener modules

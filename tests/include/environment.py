@@ -16,3 +16,11 @@ def before_scenario(context, scenario):
 def after_scenario(context, scenario):
     for func in enabled_listeners['after_scenario']:
         func(context, scenario)
+
+def before_step(context, step):
+    for func in enabled_listeners['before_step']:
+        func(context, step)
+
+def after_step(context, step):
+    for func in enabled_listeners['after_step']:
+        func(context, step)
