@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seleniumfw"
+version = "0.1.0"
+description = "SeleniumFW CLI and core library"
+authors = [
+{ name = "Badru Salam", email = "badrusalam11@example.com" }
+]
+dependencies = [
+    "typer",
+    "jinja2",
+    "python-dotenv",
+    "PyYAML",
+    "selenium",
+    "behave",
+    "reportlab",
+    "flask",
+    "requests",
+    "apscheduler",
+]
+
+[project.scripts]
+sfw = "sfw.cli:app"

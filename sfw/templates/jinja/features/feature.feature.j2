@@ -1,0 +1,13 @@
+Feature: Login functionality
+  @positive
+  Scenario Outline: Successful login
+    Given the user opens the login page
+    When the user clicks on Make Appointment
+    When the user enters username <username>
+    And the user enters password <password>
+    And the user clicks login
+    Then the user should see the dashboard
+
+Examples:
+  | username | password           |
+  | John Doe | ThisIsNotAPassword |
