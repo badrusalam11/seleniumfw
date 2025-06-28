@@ -1,26 +1,28 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "seleniumfw"
+name = "sfw"
 version = "0.1.0"
-description = "SeleniumFW CLI and core library"
+description = "SeleniumFW - A minimal Selenium test framework that adapt POM"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
 authors = [
-{ name = "Badru Salam", email = "badrusalam11@example.com" }
+  { name="Muhamad Badru Salam", email="badrusalam760@gmail.com" }
 ]
 dependencies = [
-    "typer",
-    "jinja2",
-    "python-dotenv",
-    "PyYAML",
-    "selenium",
-    "behave",
-    "reportlab",
-    "flask",
-    "requests",
-    "apscheduler",
+  "typer[all]",
+  "flask",
+  "pyyaml",
+  "apscheduler",
+  "jinja2",
+  "requests",
+  "python-dotenv"
 ]
 
 [project.scripts]
-sfw = "sfw.cli:app"
+sfw = "sfw.cli:app"  # <-- command-line entry point
+
+[tool.setuptools]
+packages = ["sfw"]
+
+[tool.setuptools.package-data]
+"sfw" = ["templates/**/*"]
