@@ -1,6 +1,6 @@
 [project]
 name = "seleniumfw"
-version = "0.1.2"
+version = "0.1.3"
 description = "SeleniumFW - A minimal Selenium test framework that adapt POM"
 readme = "README.md"
 requires-python = ">=3.8"
