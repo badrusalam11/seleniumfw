@@ -159,4 +159,4 @@ def schedule_suite():
 def start_server(port=None):
     """Entry point for `sfw serve`."""
     final_port = port or APP_PORT
-    app.run(port=final_port, debug=True)
+    app.run(host="0.0.0.0", port=final_port, debug=True)
