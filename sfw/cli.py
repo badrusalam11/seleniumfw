@@ -40,15 +40,21 @@ def init(project_name: str):
     typer.secho(f"✅ Project initialized at {dest}", fg=typer.colors.GREEN)
 
 
-
 @app.command()
 def create_testsuite(name: str):
     """Create a new testsuite folder and file"""
-    path = Path.cwd() / "testsuites" / f"{name}.yml"
+    path_yml = Path.cwd() / "testsuites" / f"{name}.yml"
     render_template(
         template_name="testsuites/testsuite.yml.j2",
         context={"suite_name": name},
-        dest=path,
+        dest=path_yml,
+        base_template_dir=TEMPLATE_JINJA_DIR
+    )
+    path_py = Path.cwd() / "testsuites" / f"{name}.py"
+    render_template(
+        template_name="testsuites/testsuite.py.j2",
+        context={"suite_name": name},
+        dest=path_py,
         base_template_dir=TEMPLATE_JINJA_DIR
     )
     typer.secho(f"✅ Created testsuite: {name}", fg=typer.colors.GREEN)
@@ -65,6 +71,18 @@ def create_testcase(name: str):
         base_template_dir=TEMPLATE_JINJA_DIR
     )
     typer.secho(f"✅ Created testcase: {name}", fg=typer.colors.GREEN)
+
+@app.command()
+def create_listener(name: str):
+    """Create a new listener file"""
+    path = Path.cwd() / "listeners" / f"{name}.py"
+    render_template(
+        template_name="listeners/listener.py.j2",
+        context={"listener_name": name},
+        dest=path,
+        base_template_dir=TEMPLATE_JINJA_DIR
+    )
+    typer.secho(f"✅ Created listener: {name}", fg=typer.colors.GREEN)
 
 
 @app.command()

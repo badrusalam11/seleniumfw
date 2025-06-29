@@ -114,7 +114,7 @@ MIT — see [LICENSE](./LICENSE) for details.
 
 ### 📨 Contact
 
-Built & maintained by **Muhamad Badru Salam** — QA Automation Engineer
+Built & maintained by **Muhamad Badru Salam** — QA Automation Engineer (SDET)
 
-Github: [badrusalam11](https://github.com/badrusalam111)
+Github: [badrusalam11](https://github.com/badrusalam11)
 LinkedIn: [Muhamad Badru Salam](https://id.linkedin.com/in/muhamad-badru-salam-3bab2531b)

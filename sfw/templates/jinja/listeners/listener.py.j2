@@ -1,0 +1,22 @@
+from seleniumfw.listener_manager import (
+    BeforeTestSuite,
+    AfterTestSuite,
+    BeforeTestCase,
+    AfterTestCase,
+)
+
+@BeforeTestSuite
+def before_suite(suite_path):
+    pass
+
+@BeforeTestCase
+def before_case(case, data=None):
+    pass
+
+@AfterTestCase
+def after_case(case, data=None):
+    pass
+
+@AfterTestSuite
+def after_suite(suite_path):
+    pass

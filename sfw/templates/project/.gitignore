@@ -5,3 +5,4 @@ env/
 reports/*
 screenshots/*
 user.properties
+actmo.properties
