@@ -33,6 +33,19 @@ def get_python_interpreter():
     return sys.executable
 
 PYTHON_EXEC = get_python_interpreter()
+import logging
+
+# Set up basic logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)  # Log to console
+        # You can add logging.FileHandler('server.log') to log to file too
+    ]
+)
+logger = logging.getLogger(__name__)
+
 
 def run_test(testsuite_path, phone_number):
     """Trigger the /api/run endpoint asynchronously."""
@@ -73,41 +86,50 @@ def run_suite():
     ts_path = data.get("testsuite_path", "")
     phone   = data.get("phone_number")
 
-    # Validate logical path prefix
+    logger.info(f"Received run request for: {ts_path} (phone: {phone})")
+
     if not ts_path.startswith("testsuites/"):
+        logger.warning("Rejected run: invalid testsuite path")
         return jsonify({"error": "testsuite_path must start with 'testsuites/'"}), 400
 
-    # Resolve to actual file
     rel = ts_path.removeprefix("testsuites/")
     full = BASE_DIR / rel
     if not full.is_file():
+        logger.error(f"Testsuite not found: {ts_path}")
         return jsonify({"error": f"Not found: {ts_path}"}), 404
 
     try:
-        # Run via subprocess in project root
+        logger.info(f"Running testsuite: {ts_path} using {PYTHON_EXEC}")
         result = subprocess.run(
             [PYTHON_EXEC, "main.py", ts_path],
             capture_output=True, text=True, cwd=str(PROJECT_ROOT)
         )
+        logger.info(f"Execution finished. Return code: {result.returncode}")
+
         stderr = result.stderr
         report_sent = None
 
         if phone:
+            logger.info(f"Looking for generated report to send to WhatsApp: {phone}")
             m = re.search(r"Report generated at: reports[\\/](\d{8}_\d{6})", stderr)
             if m:
                 stamp = m.group(1)
-                pdf   = PROJECT_ROOT / "reports" / stamp / f"{stamp}.pdf"
+                pdf = PROJECT_ROOT / "reports" / stamp / f"{stamp}.pdf"
                 if pdf.is_file():
                     try:
+                        logger.info(f"Sending report {pdf} to WhatsApp number: {phone}")
                         resp = requests.post(
                             f"{WHATSAPP_API_URL.replace(f':{APP_PORT}',':3001')}/send-file",
                             files={"file": (pdf.name, open(pdf, "rb"), "application/pdf")},
                             data={"chatId": phone, "caption": pdf.name}
                         )
                         report_sent = {"status": resp.status_code, "resp": resp.text}
+                        logger.info(f"Report sent. Status: {resp.status_code}")
                     except Exception as e:
+                        logger.error(f"Failed to send report: {e}")
                         report_sent = {"error": str(e)}
                 else:
+                    logger.warning(f"Report file not found: {pdf}")
                     report_sent = {"error": "PDF not found"}
 
         return jsonify({
@@ -118,6 +140,7 @@ def run_suite():
             "report_sent": report_sent
         })
     except Exception as e:
+        logger.exception(f"Unexpected error while running suite: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/schedule', methods=['POST'])

@@ -36,8 +36,9 @@ RUN pip install -r requirements.txt
 # Copy the rest of your application's code into the container
 COPY . .
 
-# Change the working directory to the `services/` folder where `app.py` is located
-WORKDIR /app
+# Create directories and set permissions for writable folders
+RUN mkdir -p /app/settings /app/reports /app/screenshots \
+ && chmod 777 /app/settings /app/reports /app/screenshots
 
 # Expose the Flask service port (default Flask runs on 5006)
 EXPOSE 5006

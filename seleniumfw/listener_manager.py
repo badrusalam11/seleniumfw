@@ -1,3 +1,9 @@
+import sys, os
+# ensure our project root (where your listeners/ folder lives) is first on the import path
+project_root = os.getcwd()
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 import importlib
 import os
 import glob
@@ -127,7 +133,7 @@ def load_core_and_user_listeners():
         import seleniumfw.report_listener
         logger.info("Loaded seleniumfw.report_listener hooks")
     except ImportError:
-        logger.warning("No core report_listener found")
+        logger.warning("No report_listener found")
 
     # Load project-level listeners in cwd()/listeners
     listener_dir = os.path.join(os.getcwd(), "listeners")
