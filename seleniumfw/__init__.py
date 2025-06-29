@@ -7,7 +7,6 @@ __version__ = "0.1.0"
 
 import sys
 import os
-from pathlib import Path
 from .runner import Runner
 from .utils import Logger
 
@@ -20,8 +19,8 @@ def run(target=None):
             sys.exit(1)
         target = sys.argv[1]
 
-    # Normalize the target path for cross-platform compatibility
-    normalized_target = str(Path(target).resolve())
+    # Normalize path separators to forward slashes
+    normalized_target = target.replace('\\', '/').replace('//', '/')
     
     # Check if file exists
     if not os.path.exists(normalized_target):
