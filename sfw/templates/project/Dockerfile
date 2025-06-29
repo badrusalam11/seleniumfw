@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     unzip \
+    curl \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome
@@ -14,11 +15,15 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
  && apt-get update \
  && apt-get install -y google-chrome-stable
 
-# Install Chromedriver (Ensure compatibility with the installed Chrome version)
-ENV CHROMEDRIVER_VERSION 114.0.5735.90
-RUN wget -q --continue -P /tmp https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip \
- && unzip /tmp/chromedriver_linux64.zip -d /usr/local/bin/ \
- && rm /tmp/chromedriver_linux64.zip \
+# Install ChromeDriver using Chrome for Testing API (for Chrome 115+)
+RUN CHROME_VERSION=$(google-chrome --version | cut -d " " -f3) \
+ && echo "Chrome version: $CHROME_VERSION" \
+ && CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chromedriver-linux64.zip" \
+ && echo "Downloading ChromeDriver from: $CHROMEDRIVER_URL" \
+ && wget -q --continue -P /tmp "$CHROMEDRIVER_URL" \
+ && unzip /tmp/chromedriver-linux64.zip -d /tmp/ \
+ && mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ \
+ && rm -rf /tmp/chromedriver-linux64* \
  && chmod +x /usr/local/bin/chromedriver
 
 # Set the working directory in the container
@@ -34,7 +39,7 @@ COPY . .
 # Change the working directory to the `services/` folder where `app.py` is located
 WORKDIR /app
 
-# Expose the Flask service port (default Flask runs on 5000)
+# Expose the Flask service port (default Flask runs on 5006)
 EXPOSE 5006
 
 # Start the Flask backend service

@@ -6,6 +6,8 @@ report generator, and POM-based test execution. Inspired by Katalon.
 __version__ = "0.1.0"
 
 import sys
+import os
+from pathlib import Path
 from .runner import Runner
 from .utils import Logger
 
@@ -14,19 +16,26 @@ def run(target=None):
 
     if not target:
         if len(sys.argv) < 2:
-            logger.error("Usage: python main.py <suite_file.yml | test_case.py | file.feature>")
+            logger.error("Usage: python main.py <test_file>")
             sys.exit(1)
         target = sys.argv[1]
 
-    runner = Runner()
-
-    if target.endswith(".yml"):
-        runner.run_suite(target)
-    elif target.endswith(".py"):
-        runner.run_case(target)
-    elif target.endswith(".feature"):
-        runner.run_feature(target)
-    else:
-        logger.error("Invalid file. Provide a .yml test suite or .py test case file.")
+    # Normalize the target path for cross-platform compatibility
+    normalized_target = str(Path(target).resolve())
+    
+    # Check if file exists
+    if not os.path.exists(normalized_target):
+        logger.error(f"File not found: {normalized_target}")
         sys.exit(1)
 
+    runner = Runner()
+
+    if normalized_target.endswith(".yml") or normalized_target.endswith(".yaml"):
+        runner.run_suite(normalized_target)
+    elif normalized_target.endswith(".py"):
+        runner.run_case(normalized_target)
+    elif normalized_target.endswith(".feature"):
+        runner.run_feature(normalized_target)
+    else:
+        logger.error("Invalid file. Provide a .yml/.yaml test suite, .py test case, or .feature file.")
+        sys.exit(1)

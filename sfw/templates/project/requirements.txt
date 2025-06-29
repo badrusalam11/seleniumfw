@@ -1,0 +1,4 @@
+seleniumfw
+selenium
+behave
+requests
