@@ -117,35 +117,29 @@ class Runner:
         """
         if not os.path.exists(collection_path):
             raise FileNotFoundError(f"Collection file not found: {collection_path}")
-        project_root = os.getcwd()
-        spec = yaml.safe_load(open(collection_path))
-        method = spec.get("execution_method", "sequential")
-        max_inst = spec.get("max_concurrent_instances", 1)
-        delay = spec.get("delay_between_instances(s)", 0)
-        entries = spec.get("testsuites", [])
-        # base_dir = os.path.dirname(collection_path)
 
-        def _run_entry(entry):
-            suite_id = entry.get("id")
-            suite_env = entry.get("env")
-            if suite_env:
-                env_path = os.path.join(project_root, suite_env)
-                if os.path.exists(env_path):
-                    load_dotenv(env_path, override=True)
-            suite_path = os.path.join(project_root, suite_id)
+        project_root = os.getcwd()
+        spec         = yaml.safe_load(open(collection_path))
+        method       = spec.get("execution_method", "sequential")
+        max_inst     = spec.get("max_concurrent_instances", 1)
+        delay        = spec.get("delay_between_instances(s)", 0)
+        suites       = spec.get("testsuites", [])
+
+        def _run_suite(path_str):
+            suite_path = os.path.join(project_root, path_str)
             self.logger.info(f"▶ Running suite: {suite_path}")
             self.run_suite(suite_path)
 
         if method == "parallel" and max_inst > 1:
             with ThreadPoolExecutor(max_workers=max_inst) as exe:
                 futures = []
-                for entry in entries:
-                    futures.append(exe.submit(_run_entry, entry))
+                for path_str in suites:
+                    futures.append(exe.submit(_run_suite, path_str))
                     time.sleep(delay)
                 for f in futures:
                     f.result()
         else:
-            for entry in entries:
-                _run_entry(entry)
+            for path_str in suites:
+                _run_suite(path_str)
                 if delay:
                     time.sleep(delay)

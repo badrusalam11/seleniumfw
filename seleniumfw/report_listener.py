@@ -1,8 +1,8 @@
 # File: core/report_listener.py
+
 import os
 import time
 import threading
-import builtins
 from seleniumfw.report_generator import ReportGenerator
 from seleniumfw.listener_manager import (
     BeforeTestSuite, AfterTestSuite,
@@ -11,29 +11,27 @@ from seleniumfw.listener_manager import (
     BeforeTestCase, AfterTestCase
 )
 from seleniumfw.utils import Logger
+from seleniumfw.thread_context import _thread_data, _thread_locals  # <-- shared thread-safe context
 
 logger = Logger.get_logger()
-_thread_locals = threading.local()
+
+# Timing and step-tracking structures
 _scenario_start = {}
-_steps_info = {}      # key: scenario.name, value: list of step dicts
-_step_start = {}      # key: scenario.name, value: start time of current step
-_testcase_start = {}  # key: testcase path, value: start time
-_suite_start = {}     # key: suite_path, value: start time
-_start_time = {}      # key: suite_path, value: global start time
+_steps_info = {}       # key: scenario.name, value: list of step dicts
+_step_start = {}       # key: scenario.name, value: start time of current step
+_testcase_start = {}   # key: testcase path, value: start time
+_suite_start = {}      # key: suite_path, value: start time
+_start_time = {}       # key: suite_path, value: global start time
 
 @BeforeTestSuite
 def init_report(suite_path):
-    # record suite start times
     _suite_start[suite_path] = time.time()
     _start_time[suite_path] = _suite_start[suite_path]
 
-    # create a ReportGenerator for this thread
     rg = ReportGenerator(base_dir="reports")
-    _thread_locals.report = rg
-    builtins._active_report = rg
+    _thread_locals.report = rg  # store report generator for this thread
     logger.info(f"Initialized reporting for suite: {suite_path}")
 
-    # ensure user.properties exists
     user_properties_path = os.path.join("settings", "user.properties")
     if not os.path.exists(user_properties_path):
         with open(user_properties_path, "w") as f:
@@ -75,7 +73,6 @@ def record_scenario_result(context, scenario):
     duration = time.time() - start
     status = getattr(scenario.status, 'name', str(scenario.status)).upper()
 
-    # extract category from tags
     tags = getattr(scenario, 'tags', [])
     category = tags[0] if tags else "Uncategorized"
 
@@ -87,7 +84,7 @@ def record_scenario_result(context, scenario):
     if not rg:
         return
 
-    screenshots = getattr(builtins, '_screenshot_files', [])
+    screenshots = getattr(_thread_data, "screenshots", [])
     rg.record(
         feature_name,
         scenario_name,
@@ -97,8 +94,8 @@ def record_scenario_result(context, scenario):
         steps,
         category=category
     )
+
     logger.info(f"Recorded scenario: {scenario_name} - {status} - {duration:.2f}s")
-    builtins._screenshot_files = []
 
 @AfterTestCase
 def after_test_case(case, data=None):
@@ -112,12 +109,12 @@ def after_test_case(case, data=None):
         return
 
     rg.record_test_case_result(case, status, round(duration, 2))
-    screenshots_dir = rg.screenshots_dir
-    if os.path.exists(screenshots_dir):
-        for fname in os.listdir(screenshots_dir):
-            path = os.path.join(screenshots_dir, fname)
-            if os.path.isfile(path):
-                rg.record_screenshot(case, path)
+
+    screenshots = getattr(_thread_data, "screenshots", [])
+    for path in screenshots:
+        rg.record_screenshot(case, path)
+
+    _thread_data.screenshots = []
 
 @AfterTestSuite
 def finalize_report(suite_path):
@@ -133,5 +130,3 @@ def finalize_report(suite_path):
     rg.record_overview(suite_path, round(duration, 2), start_time, end_time)
     run_dir = rg.finalize(suite_path)
     logger.info(f"Report generated at: {run_dir}")
-    # clean up thread-local report
-    del _thread_locals.report

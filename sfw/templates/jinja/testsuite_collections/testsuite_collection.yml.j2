@@ -1,0 +1,13 @@
+# How to run the suites: sequentially one after another, or in parallel. 
+# Value: sequential or parallel
+execution_method: sequential  
+
+# When running in parallel, how many suites to run at once
+max_concurrent_instances: 3  
+
+# Delay (in seconds) between starting each suite
+delay_between_instances(s): 5  
+
+testsuites:
+  - testsuites/login.yml
+  - testsuites/appointment.yml

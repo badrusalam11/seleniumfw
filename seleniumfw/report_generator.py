@@ -14,7 +14,8 @@ from seleniumfw.config import Config
 class ReportGenerator:
     def __init__(self, base_dir="reports"):
         self.config = Config()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = self.generate_report_name(datetime.now())
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
         self.run_dir = os.path.join(base_dir, timestamp)
@@ -35,6 +36,13 @@ class ReportGenerator:
         self.overview = {}
         self.testcase_screenshots = []  # Track screenshots per test case
         self.current_page = 1  # Track current page number
+    
+    def generate_report_name(self, timestamp):
+        now = timestamp
+        ts_sec = now.strftime("%Y%m%d_%H%M%S")          # e.g. "20250707_221530"
+        # ms     = now.strftime("%f")[:3]                 # first 3 digits of microseconds → milliseconds
+        # ts     = f"{ts_sec}_{ms}"                       # e.g. "20250707_221530_123"
+        return ts_sec
 
     def record(self, feature, scenario, status, duration, screenshot_paths=None, steps_info=None,  category="positive"):
         self.results.append({

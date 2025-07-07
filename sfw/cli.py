@@ -62,6 +62,19 @@ def create_testsuite(name: str):
 
 
 @app.command()
+def create_testsuite_collection(name: str):
+    """Create a new testsuite folder and file"""
+    path_yml = Path.cwd() / "testsuite_collections" / f"{name}.yml"
+    render_template(
+        template_name="testsuite_collections/testsuite_collection.yml.j2",
+        context={"suite_collection_name": name},
+        dest=path_yml,
+        base_template_dir=TEMPLATE_JINJA_DIR
+    )
+    typer.secho(f"✅ Created testsuite collection: {name}", fg=typer.colors.GREEN)
+
+
+@app.command()
 def create_testcase(name: str):
     """Create a new testcase file"""
     path = Path.cwd() / "testcases" / f"{name}.py"
