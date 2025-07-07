@@ -1,10 +1,14 @@
 # core/browser_factory.py
+import threading
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from seleniumfw.config import Config
 import os
 import builtins
+
+_thread_data = threading.local()
+
 
 class BrowserFactory:
     @staticmethod
@@ -36,36 +40,42 @@ class BrowserFactory:
         else:
             raise Exception(f"Unsupported browser: {browser}")
 
-        # --- patch save_screenshot to auto-route to report dir and track ---
+        # ensure this thread has its own list
+        if not hasattr(_thread_data, "screenshots"):
+            _thread_data.screenshots = []
+
         original_save = driver.save_screenshot
 
-        # initialize global screenshot list
-        if not hasattr(builtins, "_screenshot_files"):
-            builtins._screenshot_files = []
-
         def save_to_report(path, *a, **kw):
+            # Determine the proper folder to write into
             if not os.path.isabs(path):
                 try:
-                    from builtins import _active_report
-                    rpt_dir = _active_report.screenshots_dir
-                except (ImportError, AttributeError):
+                    from seleniumfw.thread_context import _thread_locals, _thread_data
+                    rpt = getattr(_thread_locals, "report")
+                    rpt_dir = rpt.screenshots_dir
+                except (NameError, AttributeError):
                     rpt_dir = os.path.join(os.getcwd(), "screenshots")
                 os.makedirs(rpt_dir, exist_ok=True)
 
                 filename = path
                 base, ext = os.path.splitext(filename)
                 path = os.path.join(rpt_dir, filename)
-
                 i = 1
                 while os.path.exists(path):
                     path = os.path.join(rpt_dir, f"{base}_{i}{ext}")
                     i += 1
 
-            if not hasattr(builtins, "_screenshot_files"):
-                builtins._screenshot_files = []
-            builtins._screenshot_files.append(os.path.abspath(path))
+            # Ensure this thread has its own screenshots list
+            if not hasattr(_thread_data, "screenshots"):
+                _thread_data.screenshots = []
 
+            # Record the absolute path
+            abs_path = os.path.abspath(path)
+            _thread_data.screenshots.append(abs_path)
+
+            # Finally, take the actual screenshot
             return original_save(path, *a, **kw)
+
 
 
         driver.save_screenshot = save_to_report

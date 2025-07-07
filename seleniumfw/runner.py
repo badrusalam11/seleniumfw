@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+from dotenv import load_dotenv
 import yaml
 import inspect
 from behave.__main__ import main as behave_main
@@ -106,3 +108,38 @@ class Runner:
             raise FeatureException(f"Feature run failed with code: {result_code}")
         # You can optionally store this somewhere to use in run_case
         return result_code
+    
+    
+    def run_suite_collection(self, collection_path):
+        """
+        Run a collection of test suites defined in a single YAML file.
+        collection_path: path to collection YAML (with testsuites entries and settings)
+        """
+        if not os.path.exists(collection_path):
+            raise FileNotFoundError(f"Collection file not found: {collection_path}")
+
+        project_root = os.getcwd()
+        spec         = yaml.safe_load(open(collection_path))
+        method       = spec.get("execution_method", "sequential")
+        max_inst     = spec.get("max_concurrent_instances", 1)
+        delay        = spec.get("delay_between_instances(s)", 0)
+        suites       = spec.get("testsuites", [])
+
+        def _run_suite(path_str):
+            suite_path = os.path.join(project_root, path_str)
+            self.logger.info(f"▶ Running suite: {suite_path}")
+            self.run_suite(suite_path)
+
+        if method == "parallel" and max_inst > 1:
+            with ThreadPoolExecutor(max_workers=max_inst) as exe:
+                futures = []
+                for path_str in suites:
+                    futures.append(exe.submit(_run_suite, path_str))
+                    time.sleep(delay)
+                for f in futures:
+                    f.result()
+        else:
+            for path_str in suites:
+                _run_suite(path_str)
+                if delay:
+                    time.sleep(delay)

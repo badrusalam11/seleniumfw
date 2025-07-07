@@ -1,4 +1,5 @@
 # File: core/config.py
+import json
 import os
 from dotenv import load_dotenv
 import glob
@@ -35,3 +36,20 @@ class Config:
         if not raw:
             return default or []
         return [item.strip() for item in raw.split(sep) if item.strip()]
+    
+    def get_json(self, key, default=None):
+        # 1) Try environment variables (.env takes precedence)
+        env_value = os.getenv(key)
+        if env_value is not None:
+            try:
+                return json.loads(env_value)
+            except json.JSONDecodeError:
+                return default
+        # 2) Fallback to properties file
+        raw = self.properties.get(key)
+        if raw is not None:
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                return default
+        return default

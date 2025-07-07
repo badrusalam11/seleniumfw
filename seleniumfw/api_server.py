@@ -108,20 +108,24 @@ def run_suite():
 
         stderr = result.stderr
         report_sent = None
+        report_path = None
+        report_pdf = None
 
-        if phone:
-            logger.info(f"Looking for generated report to send to WhatsApp: {phone}")
-            m = re.search(r"Report generated at: reports[\\/](\d{8}_\d{6})", stderr)
-            if m:
-                stamp = m.group(1)
-                pdf = PROJECT_ROOT / "reports" / stamp / f"{stamp}.pdf"
-                if pdf.is_file():
+        # Detect report folder path from stderr log
+        m = re.search(r"Report generated at: reports[\\/](\d{8}_\d{6})", stderr)
+        if m:
+            stamp = m.group(1)
+            report_path = f"reports/{stamp}"
+            report_pdf = PROJECT_ROOT / "reports" / stamp / f"{stamp}.pdf"
+
+            if phone:
+                if report_pdf.is_file():
                     try:
-                        logger.info(f"Sending report {pdf} to WhatsApp number: {phone}")
+                        logger.info(f"Sending report {report_pdf} to WhatsApp number: {phone}")
                         resp = requests.post(
                             f"{WHATSAPP_API_URL.replace(f':{APP_PORT}',':3001')}/send-file",
-                            files={"file": (pdf.name, open(pdf, "rb"), "application/pdf")},
-                            data={"chatId": phone, "caption": pdf.name}
+                            files={"file": (report_pdf.name, open(report_pdf, "rb"), "application/pdf")},
+                            data={"chatId": phone, "caption": report_pdf.name}
                         )
                         report_sent = {"status": resp.status_code, "resp": resp.text}
                         logger.info(f"Report sent. Status: {resp.status_code}")
@@ -129,14 +133,16 @@ def run_suite():
                         logger.error(f"Failed to send report: {e}")
                         report_sent = {"error": str(e)}
                 else:
-                    logger.warning(f"Report file not found: {pdf}")
+                    logger.warning(f"Report file not found: {report_pdf}")
                     report_sent = {"error": "PDF not found"}
 
         return jsonify({
-            "stdout":     result.stdout,
-            "stderr":     stderr,
-            "returncode": result.returncode,
+            "stdout":      result.stdout,
+            "stderr":      stderr,
+            "returncode":  result.returncode,
             "interpreter": PYTHON_EXEC,
+            "report_path": str(report_path) if report_path else None,
+            "report_pdf":  str(report_pdf) if report_pdf and report_pdf.is_file() else None,
             "report_sent": report_sent
         })
     except Exception as e:

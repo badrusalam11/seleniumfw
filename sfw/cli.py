@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import typer
 import shutil
 from pathlib import Path
@@ -58,6 +59,19 @@ def create_testsuite(name: str):
         base_template_dir=TEMPLATE_JINJA_DIR
     )
     typer.secho(f"✅ Created testsuite: {name}", fg=typer.colors.GREEN)
+
+
+@app.command()
+def create_testsuite_collection(name: str):
+    """Create a new testsuite folder and file"""
+    path_yml = Path.cwd() / "testsuite_collections" / f"{name}.yml"
+    render_template(
+        template_name="testsuite_collections/testsuite_collection.yml.j2",
+        context={"suite_collection_name": name},
+        dest=path_yml,
+        base_template_dir=TEMPLATE_JINJA_DIR
+    )
+    typer.secho(f"✅ Created testsuite collection: {name}", fg=typer.colors.GREEN)
 
 
 @app.command()
@@ -141,9 +155,21 @@ def implement_feature(name: str):
 
 
 @app.command("run")
-def run_command(target: str):
-    """Run a suite/case/feature"""
+def run_command(
+    target: str,
+    env_file: Path = typer.Option(None, "--env", "-e", help="Path to .env file to load before running")
+):
+    """Run a suite/case/feature with optional environment file"""
+    # If a custom env file is provided, override defaults
+    if env_file:
+        if not env_file.exists():
+            typer.secho(f"❌ Env file not found: {env_file}", fg=typer.colors.RED)
+            raise typer.Exit(1)
+        load_dotenv(dotenv_path=env_file, override=True)
+
+    # Execute the run
     run(target)
+
 
 
 @app.command()

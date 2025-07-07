@@ -15,6 +15,7 @@ A lightweight, POM structured test automation framework for **Python + Selenium*
 
 * `sfw init <project>` — bootstrap a complete SeleniumFW project scaffold
 * `sfw create-testsuite <name>` — generate boilerplate YAML test suite & `.py` for its test suite hook
+* `sfw create-testsuite-collection <name>` — generate boilerplate YAML test suite collection
 * `sfw create-testcase <name>` — generate a `.py` test case stub
 * `sfw create-listener <name>` — generate a test listener
 * `sfw create-feature <name>` — generate a `.feature` file
