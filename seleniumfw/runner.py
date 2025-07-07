@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+from dotenv import load_dotenv
 import yaml
 import inspect
 from behave.__main__ import main as behave_main
@@ -106,3 +108,44 @@ class Runner:
             raise FeatureException(f"Feature run failed with code: {result_code}")
         # You can optionally store this somewhere to use in run_case
         return result_code
+    
+    
+    def run_suite_collection(self, collection_path):
+        """
+        Run a collection of test suites defined in a single YAML file.
+        collection_path: path to collection YAML (with testsuites entries and settings)
+        """
+        if not os.path.exists(collection_path):
+            raise FileNotFoundError(f"Collection file not found: {collection_path}")
+        project_root = os.getcwd()
+        spec = yaml.safe_load(open(collection_path))
+        method = spec.get("execution_method", "sequential")
+        max_inst = spec.get("max_concurrent_instances", 1)
+        delay = spec.get("delay_between_instances(s)", 0)
+        entries = spec.get("testsuites", [])
+        # base_dir = os.path.dirname(collection_path)
+
+        def _run_entry(entry):
+            suite_id = entry.get("id")
+            suite_env = entry.get("env")
+            if suite_env:
+                env_path = os.path.join(project_root, suite_env)
+                if os.path.exists(env_path):
+                    load_dotenv(env_path, override=True)
+            suite_path = os.path.join(project_root, suite_id)
+            self.logger.info(f"▶ Running suite: {suite_path}")
+            self.run_suite(suite_path)
+
+        if method == "parallel" and max_inst > 1:
+            with ThreadPoolExecutor(max_workers=max_inst) as exe:
+                futures = []
+                for entry in entries:
+                    futures.append(exe.submit(_run_entry, entry))
+                    time.sleep(delay)
+                for f in futures:
+                    f.result()
+        else:
+            for entry in entries:
+                _run_entry(entry)
+                if delay:
+                    time.sleep(delay)

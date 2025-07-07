@@ -28,8 +28,12 @@ def run(target=None):
         sys.exit(1)
 
     runner = Runner()
-
-    if normalized_target.endswith(".yml") or normalized_target.endswith(".yaml"):
+    
+    # If it’s a YAML under testsuite_collections (or any nested folder thereof)…
+    if normalized_target.startswith("testsuite_collections/") and normalized_target.endswith((".yml", ".yaml")):
+        runner.run_suite_collection(normalized_target)
+    # Otherwise, fall back to your existing dispatch
+    elif normalized_target.endswith(".yml") or normalized_target.endswith(".yaml"):
         runner.run_suite(normalized_target)
     elif normalized_target.endswith(".py"):
         runner.run_case(normalized_target)

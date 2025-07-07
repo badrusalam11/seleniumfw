@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import typer
 import shutil
 from pathlib import Path
@@ -141,9 +142,21 @@ def implement_feature(name: str):
 
 
 @app.command("run")
-def run_command(target: str):
-    """Run a suite/case/feature"""
+def run_command(
+    target: str,
+    env_file: Path = typer.Option(None, "--env", "-e", help="Path to .env file to load before running")
+):
+    """Run a suite/case/feature with optional environment file"""
+    # If a custom env file is provided, override defaults
+    if env_file:
+        if not env_file.exists():
+            typer.secho(f"❌ Env file not found: {env_file}", fg=typer.colors.RED)
+            raise typer.Exit(1)
+        load_dotenv(dotenv_path=env_file, override=True)
+
+    # Execute the run
     run(target)
+
 
 
 @app.command()
