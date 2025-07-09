@@ -1,26 +1,22 @@
 # File: seleniumfw/api_client.py
-import threading
 import os
-from seleniumfw.thread_context import _thread_locals, _thread_data
 import requests
-
-# ensure we have a thread‑local container for API calls
-if not hasattr(_thread_data, "api_calls"):
-    _thread_data.api_calls = []
+from seleniumfw.thread_context import get_context, set_context
 
 class ApiClient:
     def __init__(self, base_url: str, default_headers: dict = None):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
+
         if default_headers:
             self.session.headers.update(default_headers)
 
-        # wrap the session.request method
+        # Wrap the session.request method
         original_request = self.session.request
 
         def record_and_request(method, url, *args, **kwargs):
             full_url = url if url.startswith('http') else f"{self.base_url}/{url.lstrip('/')}"
-            # record request info
+
             record = {
                 "method": method,
                 "url": full_url,
@@ -31,17 +27,13 @@ class ApiClient:
                 response = original_request(method, full_url, *args, **kwargs)
                 response.raise_for_status()
                 record["status_code"] = response.status_code
-                # you can record more: headers, body, etc.
-                # but be cautious with very large bodies
                 record["response_body"] = response.text
                 return response
             finally:
-                # store record in thread‑local
-                if not hasattr(_thread_data, "api_calls"):
-                    _thread_data.api_calls = []
-                _thread_data.api_calls.append(record)
+                api_calls = get_context("api_calls") or []
+                api_calls.append(record)
+                set_context("api_calls", api_calls)
 
-        # replace the session.request with our wrapper
         self.session.request = record_and_request
 
     def request(self, method: str, path: str, **kwargs):

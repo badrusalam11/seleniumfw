@@ -1,4 +1,4 @@
-# File: core/config.py
+# File: seleniumfw/config.py
 import json
 import os
 from dotenv import load_dotenv

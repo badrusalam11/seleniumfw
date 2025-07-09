@@ -1,8 +1,7 @@
-# File: core/report_listener.py
+# File: seleniumfw/report_listener.py
 
 import os
 import time
-import threading
 from seleniumfw.report_generator import ReportGenerator
 from seleniumfw.listener_manager import (
     BeforeTestSuite, AfterTestSuite,
@@ -11,17 +10,16 @@ from seleniumfw.listener_manager import (
     BeforeTestCase, AfterTestCase
 )
 from seleniumfw.utils import Logger
-from seleniumfw.thread_context import _thread_data, _thread_locals  # <-- shared thread-safe context
+from seleniumfw.thread_context import get_context, set_context, clear_context
 
 logger = Logger.get_logger()
 
-# Timing and step-tracking structures
 _scenario_start = {}
-_steps_info = {}       # key: scenario.name, value: list of step dicts
-_step_start = {}       # key: scenario.name, value: start time of current step
-_testcase_start = {}   # key: testcase path, value: start time
-_suite_start = {}      # key: suite_path, value: start time
-_start_time = {}       # key: suite_path, value: global start time
+_steps_info = {}
+_step_start = {}
+_testcase_start = {}
+_suite_start = {}
+_start_time = {}
 
 @BeforeTestSuite
 def init_report(suite_path):
@@ -29,7 +27,7 @@ def init_report(suite_path):
     _start_time[suite_path] = _suite_start[suite_path]
 
     rg = ReportGenerator(base_dir="reports")
-    _thread_locals.report = rg  # store report generator for this thread
+    set_context("report", rg)
     logger.info(f"Initialized reporting for suite: {suite_path}")
 
     user_properties_path = os.path.join("settings", "user.properties")
@@ -72,19 +70,17 @@ def record_scenario_result(context, scenario):
     start = _scenario_start.pop(scenario_name, None) or 0
     duration = time.time() - start
     status = getattr(scenario.status, 'name', str(scenario.status)).upper()
-
     tags = getattr(scenario, 'tags', [])
     category = tags[0] if tags else "Uncategorized"
-
     steps = _steps_info.pop(scenario_name, [])
     feature = getattr(scenario, 'feature', None)
     feature_name = feature.name if feature else "Unknown Feature"
 
-    rg = getattr(_thread_locals, 'report', None)
+    rg = get_context("report")
     if not rg:
         return
 
-    screenshots = getattr(_thread_data, "screenshots", [])
+    screenshots = get_context("screenshots") or []
     rg.record(
         feature_name,
         scenario_name,
@@ -104,27 +100,23 @@ def after_test_case(case, data=None):
     duration = time.time() - start
     status = data.get('status', 'passed').upper() if data else 'PASSED'
 
-    rg = getattr(_thread_locals, 'report', None)
+    rg = get_context("report")
     if not rg:
         return
 
-    # record the basic result
     rg.record_test_case_result(case, status, round(duration, 2))
 
-    # record screenshots (as before)
-    screenshots = getattr(_thread_data, "screenshots", [])
+    screenshots = get_context("screenshots") or []
     for path in screenshots:
         rg.record_screenshot(case, path)
 
-    api_calls = getattr(_thread_data, "api_calls", [])
+    api_calls = get_context("api_calls") or []
     if api_calls:
-        # stash them for PDF rendering
         rg.testcase_api_calls[case] = api_calls
 
     # cleanup
-    _thread_data.screenshots = []
-    _thread_data.api_calls   = []
-
+    set_context("screenshots", [])
+    set_context("api_calls", [])
 
 @AfterTestSuite
 def finalize_report(suite_path):
@@ -133,7 +125,7 @@ def finalize_report(suite_path):
     start_time = _start_time.pop(suite_path, None) or start
     duration = end_time - start
 
-    rg = getattr(_thread_locals, 'report', None)
+    rg = get_context("report")
     if not rg:
         return
 

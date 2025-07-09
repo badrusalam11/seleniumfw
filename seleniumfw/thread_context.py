@@ -13,8 +13,10 @@ def get_context(key, default=None):
 def has_context(key):
     return hasattr(_thread_context, key)
 
+def delete_context(key):
+    if hasattr(_thread_context, key):
+        delattr(_thread_context, key)
+
 def clear_context():
-    """Clear all attributes for this thread."""
-    for attr in dir(_thread_context):
-        if not attr.startswith("__"):
-            delattr(_thread_context, attr)
+    for key in list(vars(_thread_context).keys()):
+        delattr(_thread_context, key)
