@@ -36,6 +36,7 @@ class ReportGenerator:
         self.overview = {}
         self.testcase_screenshots = []  # Track screenshots per test case
         self.current_page = 1  # Track current page number
+        self.testcase_api_calls = {}  
     
     def generate_report_name(self, timestamp):
         now = timestamp
@@ -109,24 +110,41 @@ class ReportGenerator:
             self.y = self.height - 50
 
     def _wrap_text(self, text, max_width, font_name, font_size):
-        """Improved text wrapping that considers actual text width"""
-        words = text.split()
+        """
+        Wrap text to fit within max_width.
+        - Splits on spaces when possible
+        - Chops words longer than max_width into smaller pieces
+        """
+        words = text.split(" ")
         lines = []
-        current_line = ""
-        
+        current = ""
         for word in words:
-            test_line = f"{current_line} {word}".strip()
-            if self.c.stringWidth(test_line, font_name, font_size) <= max_width:
-                current_line = test_line
+            test = f"{current} {word}".strip()
+            # if adding this word still fits, do it
+            if self.c.stringWidth(test, font_name, font_size) <= max_width:
+                current = test
             else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-        
-        if current_line:
-            lines.append(current_line)
-        
+                # flush the current line
+                if current:
+                    lines.append(current)
+                # now handle the too-long word itself
+                if self.c.stringWidth(word, font_name, font_size) <= max_width:
+                    # it fits on its own line
+                    current = word
+                else:
+                    # break the word into sub‑chunks
+                    part = ""
+                    for ch in word:
+                        if self.c.stringWidth(part + ch, font_name, font_size) <= max_width:
+                            part += ch
+                        else:
+                            lines.append(part)
+                            part = ch
+                    current = part
+        if current:
+            lines.append(current)
         return lines
+
 
     def _add_footer(self):
         """Add copyright footer with clickable LinkedIn link and page numbering"""
@@ -499,6 +517,93 @@ class ReportGenerator:
         self.y -= 15
         self.c.setFillColor(colors.black)
 
+
+    
+    METHOD_COLORS = {
+        "GET":    HexColor("#61affe"),
+        "POST":   HexColor("#49cc90"),
+        "PUT":    HexColor("#fca130"),
+        "DELETE": HexColor("#f93e3e"),
+        "PATCH":  HexColor("#50e3c2"),
+    }
+
+    def add_api_section_for_test_case(self, case_name):
+        calls = self.testcase_api_calls.get(case_name, [])
+        if not calls:
+            return
+
+        # extra vertical gap
+        self.y -= 15
+        self.add_section_title(f"API Calls for {case_name}", font_size=12, spacing=8)
+
+        for call in calls:
+            method = call.get("method", "").upper()
+            url    = call.get("url", "")
+            req    = call.get("kwargs", {})
+            resp   = call.get("response_body", "")
+
+            margin = 50
+            full_width = self.width - 2*margin
+            badge_w = 50
+            text_x = margin + badge_w + 5
+            wrap_width = full_width - badge_w - 10
+
+            # 1) Header
+            header_h = 20
+            self._new_page_if_needed(header_h + 200)
+            # border
+            self.c.setStrokeColor(self.METHOD_COLORS.get(method, colors.black))
+            self.c.rect(margin, self.y - header_h, full_width, header_h, fill=0)
+            # badge
+            self.c.setFillColor(self.METHOD_COLORS.get(method, colors.black))
+            self.c.rect(margin, self.y - header_h, badge_w, header_h, fill=1, stroke=0)
+            self.c.setFillColor(colors.white)
+            self.c.setFont("Helvetica-Bold", 9)
+            self.c.drawCentredString(margin + badge_w/2, self.y - header_h + 5, method)
+            # URL (wrapped)
+            self.c.setFillColor(colors.black)
+            self.c.setFont("Helvetica", 8)
+            url_lines = self._wrap_text(url, wrap_width, "Helvetica", 8)
+            for i, line in enumerate(url_lines):
+                self.c.drawString(text_x, self.y - header_h + 5 - i*10, line)
+            # step down
+            self.y -= (header_h + 5)
+
+            # 2) Request box (light blue)
+            if "json" in req:
+                payload = json.dumps(req["json"], ensure_ascii=False)
+            else:
+                payload = str(req.get("data", ""))
+            req_lines = self._wrap_text(payload, full_width - 60, "Helvetica", 7)
+            req_h = 12 + len(req_lines)*8
+            self._new_page_if_needed(req_h + 20)
+            self.c.setFillColor(HexColor("#e3f2fd"))
+            self.c.rect(margin, self.y - req_h, full_width, req_h, fill=1, stroke=0)
+            self.c.setFillColor(colors.black)
+            self.c.setFont("Helvetica-Bold", 8)
+            self.c.drawString(margin + 5, self.y - 12, "Request:")
+            self.c.setFont("Helvetica", 7)
+            for i, line in enumerate(req_lines):
+                self.c.drawString(margin + 60, self.y - 12 - i*8, line)
+            self.y -= (req_h + 5)
+
+            # 3) Response box (light green)
+            # wrap at right margin
+            resp_lines = self._wrap_text(resp, full_width - 60, "Helvetica", 7)
+            resp_h = 12 + len(resp_lines)*8
+            self._new_page_if_needed(resp_h + 20)
+            self.c.setFillColor(HexColor("#e8f5e9"))
+            self.c.rect(margin, self.y - resp_h, full_width, resp_h, fill=1, stroke=0)
+            self.c.setFillColor(colors.black)
+            self.c.setFont("Helvetica-Bold", 8)
+            self.c.drawString(margin + 5, self.y - 12, "Response:")
+            self.c.setFont("Helvetica", 7)
+            for i, line in enumerate(resp_lines):
+                self.c.drawString(margin + 60, self.y - 12 - i*8, line)
+            # final y
+            self.y -= (resp_h + 15)
+            self._new_page_if_needed(50)
+
     def finalize(self, suite_path):
         suite_name = os.path.basename(suite_path)
         self.add_header(suite_name)
@@ -578,7 +683,9 @@ class ReportGenerator:
                     self.add_feature_section(item['feature'])
                     current_feature = item['feature']
                 self.add_scenario_section(item)
-
+        for case in (c["name"] for c in self.testcase_result):
+            self.add_api_section_for_test_case(case)
+        
         self._add_footer()
         self.save_json()
         self.c.save()

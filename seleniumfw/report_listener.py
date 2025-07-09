@@ -108,13 +108,23 @@ def after_test_case(case, data=None):
     if not rg:
         return
 
+    # record the basic result
     rg.record_test_case_result(case, status, round(duration, 2))
 
+    # record screenshots (as before)
     screenshots = getattr(_thread_data, "screenshots", [])
     for path in screenshots:
         rg.record_screenshot(case, path)
 
+    api_calls = getattr(_thread_data, "api_calls", [])
+    if api_calls:
+        # stash them for PDF rendering
+        rg.testcase_api_calls[case] = api_calls
+
+    # cleanup
     _thread_data.screenshots = []
+    _thread_data.api_calls   = []
+
 
 @AfterTestSuite
 def finalize_report(suite_path):
