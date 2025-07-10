@@ -20,6 +20,7 @@ _step_start = {}
 _testcase_start = {}
 _suite_start = {}
 _start_time = {}
+_scenario_screenshot_start_index = {}  # Track starting index of screenshots for each scenario
 
 @BeforeTestSuite
 def init_report(suite_path):
@@ -45,6 +46,12 @@ def start_scenario_timer(context, scenario):
     _scenario_start[scenario.name] = time.time()
     _step_start[scenario.name] = 0
     _steps_info[scenario.name] = []
+    
+    # Record the current length of screenshots list as starting point for this scenario
+    current_screenshots = get_context("screenshots") or []
+    _scenario_screenshot_start_index[scenario.name] = len(current_screenshots)
+    
+    logger.info(f"Scenario '{scenario.name}' started with {len(current_screenshots)} existing screenshots")
 
 @BeforeStep
 def start_step_timer(context, step):
@@ -80,18 +87,24 @@ def record_scenario_result(context, scenario):
     if not rg:
         return
 
-    screenshots = get_context("screenshots") or []
+    # Get screenshots that were added during this scenario
+    all_screenshots = get_context("screenshots") or []
+    start_index = _scenario_screenshot_start_index.pop(scenario_name, 0)
+    scenario_screenshots = all_screenshots[start_index:]  # Screenshots added since scenario started
+    
+    logger.info(f"Scenario '{scenario_name}' captured {len(scenario_screenshots)} screenshots (from index {start_index} to {len(all_screenshots)})")
+
     rg.record(
         feature_name,
         scenario_name,
         status,
         round(duration, 2),
-        screenshots,
+        scenario_screenshots,  # Only screenshots from this scenario
         steps,
         category=category
     )
 
-    logger.info(f"Recorded scenario: {scenario_name} - {status} - {duration:.2f}s")
+    logger.info(f"Recorded scenario: {scenario_name} - {status} - {duration:.2f}s - Screenshots: {len(scenario_screenshots)}")
 
 @AfterTestCase
 def after_test_case(case, data=None):
@@ -106,6 +119,7 @@ def after_test_case(case, data=None):
 
     rg.record_test_case_result(case, status, round(duration, 2))
 
+    # Record all screenshots for the testcase (unchanged behavior)
     screenshots = get_context("screenshots") or []
     for path in screenshots:
         rg.record_screenshot(case, path)
@@ -113,6 +127,8 @@ def after_test_case(case, data=None):
     api_calls = get_context("api_calls") or []
     if api_calls:
         rg.testcase_api_calls[case] = api_calls
+
+    logger.info(f"Recorded testcase: {case} - {status} - {duration:.2f}s - Total Screenshots: {len(screenshots)}")
 
     # cleanup
     set_context("screenshots", [])
@@ -132,3 +148,6 @@ def finalize_report(suite_path):
     rg.record_overview(suite_path, round(duration, 2), start_time, end_time)
     run_dir = rg.finalize(suite_path)
     logger.info(f"Report generated at: {run_dir}")
+    
+    # Clear any remaining tracking data
+    _scenario_screenshot_start_index.clear()
