@@ -45,7 +45,8 @@ class ReportGenerator:
         # ts     = f"{ts_sec}_{ms}"                       # e.g. "20250707_221530_123"
         return ts_sec
 
-    def record(self, feature, scenario, status, duration, screenshot_paths=None, steps_info=None,  category="positive"):
+    def record(self, feature, scenario, status, duration, screenshot_paths=None, steps_info=None, category="positive", api_calls=None):
+        """Record scenario with screenshots, steps, and API calls"""
         self.results.append({
             "feature": feature,
             "scenario": scenario,
@@ -53,7 +54,8 @@ class ReportGenerator:
             "duration": duration,
             "screenshot": screenshot_paths or [],
             "steps": steps_info or [],
-            "category": category  # ✅ store tag here
+            "category": category,
+            "api_calls": api_calls or []  # Add API calls to scenario record
         })
 
     def record_test_case_result(self, name, status, duration):
@@ -444,132 +446,137 @@ class ReportGenerator:
         self.c.setFillColor(colors.black)
 
     def add_scenario_section(self, scenario_data):
-            # Ensure enough room
-            self._new_page_if_needed(200)
+        # Ensure enough room
+        self._new_page_if_needed(200)
 
-            # 1) Wrap the scenario title
-            full_width = self.width - 100    # 50px margin each side
-            text       = (f"Scenario: {scenario_data['scenario']} "
-                        f"({scenario_data['status']}, {scenario_data['duration']:.2f}s)")
-            wrapped    = self._wrap_text(text, full_width - 10, "Helvetica-Bold", 11)
-            line_h     = 14
-            stripe_h   = max(25, len(wrapped) * line_h + 10)  # Increased padding
+        # 1) Wrap the scenario title
+        full_width = self.width - 100    # 50px margin each side
+        text       = (f"Scenario: {scenario_data['scenario']} "
+                    f"({scenario_data['status']}, {scenario_data['duration']:.2f}s)")
+        wrapped    = self._wrap_text(text, full_width - 10, "Helvetica-Bold", 11)
+        line_h     = 14
+        stripe_h   = max(25, len(wrapped) * line_h + 10)  # Increased padding
 
-            # 2) Draw header stripe at current y
-            stripe_top = self.y
-            stripe_bottom = stripe_top - stripe_h
-            self.c.setFillColor(HexColor("#f4f4dc"))
-            self.c.rect(50, stripe_bottom, full_width, stripe_h, stroke=0, fill=1)
+        # 2) Draw header stripe at current y
+        stripe_top = self.y
+        stripe_bottom = stripe_top - stripe_h
+        self.c.setFillColor(HexColor("#f4f4dc"))
+        self.c.rect(50, stripe_bottom, full_width, stripe_h, stroke=0, fill=1)
 
-            # 3) Draw each wrapped line
-            self.c.setFillColor(colors.black)
-            self.c.setFont("Helvetica-Bold", 11)
-            text_x = 55
-            # start ~10px down from stripe_top
-            start_y = stripe_top - 12
-            for i, line in enumerate(wrapped):
-                self.c.drawString(text_x, start_y - i*line_h, line)
+        # 3) Draw each wrapped line
+        self.c.setFillColor(colors.black)
+        self.c.setFont("Helvetica-Bold", 11)
+        text_x = 55
+        # start ~10px down from stripe_top
+        start_y = stripe_top - 12
+        for i, line in enumerate(wrapped):
+            self.c.drawString(text_x, start_y - i*line_h, line)
 
-            # 4) Now move self.y BELOW the stripe (no padding - direct connection)
-            self.y = stripe_bottom
+        # 4) Now move self.y BELOW the stripe (no padding - direct connection)
+        self.y = stripe_bottom
 
-            # 5) Draw steps starting from current y
-            box_width   = full_width
-            left_margin = 50
-            text_margin = 60
-            right_pad   = 15
+        # 5) Draw steps starting from current y
+        box_width   = full_width
+        left_margin = 50
+        text_margin = 60
+        right_pad   = 15
 
-            for step in scenario_data['steps']:
-                keyword = step['keyword']
-                name    = step['name']
-                dur_txt = f"{step['duration']:.2f}s"
+        for step in scenario_data['steps']:
+            keyword = step['keyword']
+            name    = step['name']
+            dur_txt = f"{step['duration']:.2f}s"
 
-                # calculate height & wrap
-                dur_w   = self.c.stringWidth(dur_txt, "Helvetica", 10)
-                avail_w = box_width - (text_margin - left_margin) - right_pad - dur_w - 20
-                lines   = self._wrap_text(f"{keyword} {name}", avail_w, "Helvetica", 10)
-                step_h  = max(25, len(lines) * line_h + 10)  # Increased minimum height
+            # calculate height & wrap
+            dur_w   = self.c.stringWidth(dur_txt, "Helvetica", 10)
+            avail_w = box_width - (text_margin - left_margin) - right_pad - dur_w - 20
+            lines   = self._wrap_text(f"{keyword} {name}", avail_w, "Helvetica", 10)
+            step_h  = max(25, len(lines) * line_h + 10)  # Increased minimum height
 
-                # page break if needed
-                self._new_page_if_needed(step_h + 5)
+            # page break if needed
+            self._new_page_if_needed(step_h + 5)
 
-                # draw step background
-                self.c.setFillColor(HexColor("#c7d98d"))
-                self.c.rect(left_margin, self.y - step_h, box_width, step_h, stroke=0, fill=1)
+            # draw step background
+            self.c.setFillColor(HexColor("#c7d98d"))
+            self.c.rect(left_margin, self.y - step_h, box_width, step_h, stroke=0, fill=1)
 
-                # draw text + bold keyword
-                y0 = self.y - 12
-                x0 = text_margin
+            # draw text + bold keyword
+            y0 = self.y - 12
+            x0 = text_margin
 
-                # first line: bold keyword
-                first = lines[0]
-                if first.startswith(keyword + " "):
-                    self.c.setFont("Helvetica-Bold", 10)
-                    self.c.setFillColor(colors.black)
-                    self.c.drawString(x0, y0, keyword)
-                    kw_w = self.c.stringWidth(keyword + " ", "Helvetica-Bold", 10)
-                    self.c.setFont("Helvetica", 10)
-                    self.c.drawString(x0 + kw_w, y0, first[len(keyword)+1:])
-                else:
-                    self.c.setFont("Helvetica", 10)
-                    self.c.setFillColor(colors.black)
-                    self.c.drawString(x0, y0, first)
-
-                # additional lines
+            # first line: bold keyword
+            first = lines[0]
+            if first.startswith(keyword + " "):
+                self.c.setFont("Helvetica-Bold", 10)
+                self.c.setFillColor(colors.black)
+                self.c.drawString(x0, y0, keyword)
+                kw_w = self.c.stringWidth(keyword + " ", "Helvetica-Bold", 10)
                 self.c.setFont("Helvetica", 10)
-                for idx, ln in enumerate(lines[1:], start=1):
-                    self.c.drawString(text_margin, y0 - idx*line_h, ln)
+                self.c.drawString(x0 + kw_w, y0, first[len(keyword)+1:])
+            else:
+                self.c.setFont("Helvetica", 10)
+                self.c.setFillColor(colors.black)
+                self.c.drawString(x0, y0, first)
 
-                # duration at right
-                self.c.drawString(
-                    left_margin + box_width - right_pad - dur_w,
-                    y0,
-                    dur_txt
-                )
+            # additional lines
+            self.c.setFont("Helvetica", 10)
+            for idx, ln in enumerate(lines[1:], start=1):
+                self.c.drawString(text_margin, y0 - idx*line_h, ln)
 
-                # advance y position
-                self.y -= step_h
-                
-            # 6) Screenshots: Display AFTER all steps are complete
-            if scenario_data.get('screenshot'):
-                # Add some spacing before screenshots
-                self.y -= 10
-                
-                max_w = self.width - 100  # Define max_w for screenshots
-                max_h = 300
-                
-                for img_file in scenario_data['screenshot']:
-                    try:
-                        img_reader = ImageReader(img_file)
-                        iw, ih = img_reader.getSize()
-                        scale = min(max_w/iw, max_h/ih)
-                        w, h = iw*scale, ih*scale
-                        
-                        # Check if we need a new page for this screenshot
-                        self._new_page_if_needed(h + 30)
-                        
-                        x = 50  # Match left margin
-                        y_pos = self.y - h
-                        self.c.drawImage(img_reader, x, y_pos, width=w, height=h, preserveAspectRatio=True)
-                        self.y = y_pos - 20  # Add spacing after screenshot
-                        
-                    except Exception as e:
-                        # Handle image loading errors
-                        placeholder_h = 80
-                        self._new_page_if_needed(placeholder_h + 30)
-                        self.c.setFillColor(colors.lightgrey)
-                        self.c.rect(50, self.y - placeholder_h, max_w, placeholder_h, stroke=0, fill=1)
-                        # Add error text
-                        self.c.setFillColor(colors.red)
-                        self.c.setFont("Helvetica", 10)
-                        self.c.drawString(55, self.y - placeholder_h/2, f"Failed to load image: {os.path.basename(img_file)}")
-                        # Reset fill color and update position
-                        self.c.setFillColor(colors.black)
-                        self.y -= (placeholder_h + 20)
-            # 7) Add spacing before next scenario
-            self.y -= 15
-            self.c.setFillColor(colors.black)
+            # duration at right
+            self.c.drawString(
+                left_margin + box_width - right_pad - dur_w,
+                y0,
+                dur_txt
+            )
+
+            # advance y position
+            self.y -= step_h
             
+        # 6) API Calls: Display scenario-specific API calls AFTER steps
+        scenario_api_calls = scenario_data.get('api_calls', [])
+        if scenario_api_calls:
+            self.add_api_section(scenario_api_calls, f"API Calls for Scenario: {scenario_data['scenario']}")
+            
+        # 7) Screenshots: Display AFTER steps and API calls
+        if scenario_data.get('screenshot'):
+            # Add some spacing before screenshots
+            self.y -= 10
+            
+            max_w = self.width - 100  # Define max_w for screenshots
+            max_h = 300
+            
+            for img_file in scenario_data['screenshot']:
+                try:
+                    img_reader = ImageReader(img_file)
+                    iw, ih = img_reader.getSize()
+                    scale = min(max_w/iw, max_h/ih)
+                    w, h = iw*scale, ih*scale
+                    
+                    # Check if we need a new page for this screenshot
+                    self._new_page_if_needed(h + 30)
+                    
+                    x = 50  # Match left margin
+                    y_pos = self.y - h
+                    self.c.drawImage(img_reader, x, y_pos, width=w, height=h, preserveAspectRatio=True)
+                    self.y = y_pos - 20  # Add spacing after screenshot
+                    
+                except Exception as e:
+                    # Handle image loading errors
+                    placeholder_h = 80
+                    self._new_page_if_needed(placeholder_h + 30)
+                    self.c.setFillColor(colors.lightgrey)
+                    self.c.rect(50, self.y - placeholder_h, max_w, placeholder_h, stroke=0, fill=1)
+                    # Add error text
+                    self.c.setFillColor(colors.red)
+                    self.c.setFont("Helvetica", 10)
+                    self.c.drawString(55, self.y - placeholder_h/2, f"Failed to load image: {os.path.basename(img_file)}")
+                    # Reset fill color and update position
+                    self.c.setFillColor(colors.black)
+                    self.y -= (placeholder_h + 20)
+
+        # 8) Add spacing before next scenario
+        self.y -= 15
+        self.c.setFillColor(colors.black)
 
     METHOD_COLORS = {
         "GET":    HexColor("#61affe"),
@@ -579,20 +586,24 @@ class ReportGenerator:
         "PATCH":  HexColor("#50e3c2"),
     }
 
-    def add_api_section_for_test_case(self, case_name):
-        calls = self.testcase_api_calls.get(case_name, [])
-        if not calls:
+    def add_api_section(self, api_calls, section_title=None):
+        """
+        ✅ REUSABLE method for displaying API calls
+        Can be called from both scenarios and test cases
+        """
+        if not api_calls:
             return
 
-        # extra vertical gap
-        self.y -= 15
-        self.add_section_title(f"API Calls for {case_name}", font_size=12, spacing=8)
+        # Add section title if provided
+        if section_title:
+            self.y -= 10
+            self.add_section_title(section_title, font_size=10, spacing=6)
 
-        for call in calls:
+        for call in api_calls:
             method = call.get("method", "").upper()
-            url    = call.get("url", "")
-            req    = call.get("kwargs", {})
-            resp   = call.get("response_body", "")
+            url = call.get("url", "")
+            req = call.get("kwargs", {})
+            resp = call.get("response_body", "")
 
             margin = 50
             full_width = self.width - 2*margin
@@ -621,41 +632,117 @@ class ReportGenerator:
             # step down
             self.y -= (header_h + 5)
 
-            # 2) Request box (light blue)
-            if "json" in req:
-                payload = json.dumps(req["json"], ensure_ascii=False)
-            else:
-                payload = str(req.get("data", ""))
-            req_lines = self._wrap_text(payload, full_width - 60, "Helvetica", 7)
-            req_h = 12 + len(req_lines)*8
-            self._new_page_if_needed(req_h + 20)
-            self.c.setFillColor(HexColor("#e3f2fd"))
-            self.c.rect(margin, self.y - req_h, full_width, req_h, fill=1, stroke=0)
-            self.c.setFillColor(colors.black)
-            self.c.setFont("Helvetica-Bold", 8)
-            self.c.drawString(margin + 5, self.y - 12, "Request:")
-            self.c.setFont("Helvetica", 7)
-            for i, line in enumerate(req_lines):
-                self.c.drawString(margin + 60, self.y - 12 - i*8, line)
-            self.y -= (req_h + 5)
+            # 2) Request box (light blue) - ULTRA STRICT WIDTH CONTROL
+            if req:
+                if "json" in req:
+                    payload = json.dumps(req["json"], ensure_ascii=False)
+                else:
+                    payload = str(req.get("data", ""))
+                
+                if payload and payload.strip():
+                    # ✅ MAXIMUM WIDTH SAFETY - Batas width sangat ketat
+                    max_content_width = full_width - 100  # Margin super besar
+                    
+                    # Split payload into manageable chunks if too long
+                    if len(payload) > 300:  # Limit panjang payload
+                        payload = payload[:300] + "... (truncated)"
+                    
+                    req_lines = []
+                    words = payload.split()
+                    current_line = ""
+                    
+                    for word in words:
+                        test_line = f"{current_line} {word}".strip()
+                        # ✅ STRICT WIDTH CHECK - Cek width setiap kata
+                        if self.c.stringWidth(test_line, "Helvetica", 7) <= max_content_width:
+                            current_line = test_line
+                        else:
+                            if current_line:
+                                req_lines.append(current_line)
+                            current_line = word
+                    
+                    if current_line:
+                        req_lines.append(current_line)
+                    
+                    req_h = 12 + len(req_lines)*8
+                    self._new_page_if_needed(req_h + 20)
+                    
+                    self.c.setFillColor(HexColor("#e3f2fd"))
+                    self.c.rect(margin, self.y - req_h, full_width, req_h, fill=1, stroke=0)
+                    self.c.setFillColor(colors.black)
+                    self.c.setFont("Helvetica-Bold", 8)
+                    self.c.drawString(margin + 5, self.y - 12, "Request:")
+                    self.c.setFont("Helvetica", 7)
+                    
+                    for i, line in enumerate(req_lines):
+                        x_pos = margin + 60
+                        y_pos = self.y - 12 - i*8
+                        # ✅ FINAL SAFETY CHECK - Potong jika masih terlalu panjang
+                        while self.c.stringWidth(line, "Helvetica", 7) > max_content_width and len(line) > 10:
+                            line = line[:-10] + "..."
+                        self.c.drawString(x_pos, y_pos, line)
+                    
+                    self.y -= (req_h + 5)
 
-            # 3) Response box (light green)
-            # wrap at right margin
-            resp_lines = self._wrap_text(resp, full_width - 60, "Helvetica", 7)
-            resp_h = 12 + len(resp_lines)*8
-            self._new_page_if_needed(resp_h + 20)
-            self.c.setFillColor(HexColor("#e8f5e9"))
-            self.c.rect(margin, self.y - resp_h, full_width, resp_h, fill=1, stroke=0)
-            self.c.setFillColor(colors.black)
-            self.c.setFont("Helvetica-Bold", 8)
-            self.c.drawString(margin + 5, self.y - 12, "Response:")
-            self.c.setFont("Helvetica", 7)
-            for i, line in enumerate(resp_lines):
-                self.c.drawString(margin + 60, self.y - 12 - i*8, line)
-            # final y
-            self.y -= (resp_h + 15)
-            self._new_page_if_needed(50)
+            # 3) Response box (light green) - ULTRA STRICT WIDTH CONTROL
+            if resp and resp.strip():
+                # ✅ MAXIMUM WIDTH SAFETY - Batas width sangat ketat
+                max_content_width = full_width - 100  # Margin super besar
+                
+                # Split response into manageable chunks if too long
+                if len(resp) > 300:  # Limit panjang response
+                    resp = resp[:300] + "... (truncated)"
+                
+                resp_lines = []
+                words = resp.split()
+                current_line = ""
+                
+                for word in words:
+                    test_line = f"{current_line} {word}".strip()
+                    # ✅ STRICT WIDTH CHECK - Cek width setiap kata
+                    if self.c.stringWidth(test_line, "Helvetica", 7) <= max_content_width:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            resp_lines.append(current_line)
+                        current_line = word
+                
+                if current_line:
+                    resp_lines.append(current_line)
+                
+                resp_h = 12 + len(resp_lines)*8
+                self._new_page_if_needed(resp_h + 20)
+                
+                self.c.setFillColor(HexColor("#e8f5e9"))
+                self.c.rect(margin, self.y - resp_h, full_width, resp_h, fill=1, stroke=0)
+                self.c.setFillColor(colors.black)
+                self.c.setFont("Helvetica-Bold", 8)
+                self.c.drawString(margin + 5, self.y - 12, "Response:")
+                self.c.setFont("Helvetica", 7)
+                
+                for i, line in enumerate(resp_lines):
+                    x_pos = margin + 60
+                    y_pos = self.y - 12 - i*8
+                    # ✅ FINAL SAFETY CHECK - Potong jika masih terlalu panjang
+                    while self.c.stringWidth(line, "Helvetica", 7) > max_content_width and len(line) > 10:
+                        line = line[:-10] + "..."
+                    self.c.drawString(x_pos, y_pos, line)
+                
+                self.y -= (resp_h + 15)
+                self._new_page_if_needed(50)
 
+    def add_api_section_for_test_case(self, case_name):
+        """
+        ✅ WRAPPER method for test case API calls
+        Uses the generic add_api_section method
+        """
+        calls = self.testcase_api_calls.get(case_name, [])
+        if not calls:
+            return
+
+        # Add spacing and call the generic method
+        self.y -= 15
+        self.add_api_section(calls, f"API Calls for {case_name}")
 
     def finalize(self, suite_path):
         suite_name = os.path.basename(suite_path)
@@ -760,8 +847,11 @@ class ReportGenerator:
                 self.y = y_top - line_h - 120 - 10    
 
         # 6. Add API sections for each test case
-        for case in (c["name"] for c in self.testcase_result):
-            self.add_api_section_for_test_case(case)
+        # ✅ Only show test case API calls if no scenarios have API calls
+        has_scenario_api_calls = any(item.get('api_calls') for item in self.results)
+        if not has_scenario_api_calls:
+            for case in (c["name"] for c in self.testcase_result):
+                self.add_api_section_for_test_case(case)
         
         # 7. Add footer and save
         self._add_footer()

@@ -21,6 +21,7 @@ _testcase_start = {}
 _suite_start = {}
 _start_time = {}
 _scenario_screenshot_start_index = {}  # Track starting index of screenshots for each scenario
+_scenario_api_calls_start_index = {}   # Track starting index of API calls for each scenario
 
 @BeforeTestSuite
 def init_report(suite_path):
@@ -51,7 +52,11 @@ def start_scenario_timer(context, scenario):
     current_screenshots = get_context("screenshots") or []
     _scenario_screenshot_start_index[scenario.name] = len(current_screenshots)
     
-    logger.info(f"Scenario '{scenario.name}' started with {len(current_screenshots)} existing screenshots")
+    # Record the current length of API calls list as starting point for this scenario
+    current_api_calls = get_context("api_calls") or []
+    _scenario_api_calls_start_index[scenario.name] = len(current_api_calls)
+    
+    logger.info(f"Scenario '{scenario.name}' started with {len(current_screenshots)} existing screenshots and {len(current_api_calls)} existing API calls")
 
 @BeforeStep
 def start_step_timer(context, step):
@@ -89,22 +94,29 @@ def record_scenario_result(context, scenario):
 
     # Get screenshots that were added during this scenario
     all_screenshots = get_context("screenshots") or []
-    start_index = _scenario_screenshot_start_index.pop(scenario_name, 0)
-    scenario_screenshots = all_screenshots[start_index:]  # Screenshots added since scenario started
+    screenshot_start_index = _scenario_screenshot_start_index.pop(scenario_name, 0)
+    scenario_screenshots = all_screenshots[screenshot_start_index:]
     
-    logger.info(f"Scenario '{scenario_name}' captured {len(scenario_screenshots)} screenshots (from index {start_index} to {len(all_screenshots)})")
+    # Get API calls that were made during this scenario
+    all_api_calls = get_context("api_calls") or []
+    api_calls_start_index = _scenario_api_calls_start_index.pop(scenario_name, 0)
+    scenario_api_calls = all_api_calls[api_calls_start_index:]
+    
+    logger.info(f"Scenario '{scenario_name}' captured {len(scenario_screenshots)} screenshots and {len(scenario_api_calls)} API calls")
 
+    # Record scenario with API calls included
     rg.record(
         feature_name,
         scenario_name,
         status,
         round(duration, 2),
-        scenario_screenshots,  # Only screenshots from this scenario
+        scenario_screenshots,  # Screenshots from this scenario
         steps,
-        category=category
+        category=category,
+        api_calls=scenario_api_calls  # API calls from this scenario
     )
 
-    logger.info(f"Recorded scenario: {scenario_name} - {status} - {duration:.2f}s - Screenshots: {len(scenario_screenshots)}")
+    logger.info(f"Recorded scenario: {scenario_name} - {status} - {duration:.2f}s - Screenshots: {len(scenario_screenshots)} - API calls: {len(scenario_api_calls)}")
 
 @AfterTestCase
 def after_test_case(case, data=None):
@@ -124,11 +136,12 @@ def after_test_case(case, data=None):
     for path in screenshots:
         rg.record_screenshot(case, path)
 
+    # Record all API calls for the testcase (unchanged behavior)
     api_calls = get_context("api_calls") or []
     if api_calls:
         rg.testcase_api_calls[case] = api_calls
 
-    logger.info(f"Recorded testcase: {case} - {status} - {duration:.2f}s - Total Screenshots: {len(screenshots)}")
+    logger.info(f"Recorded testcase: {case} - {status} - {duration:.2f}s - Total Screenshots: {len(screenshots)} - Total API calls: {len(api_calls)}")
 
     # cleanup
     set_context("screenshots", [])
@@ -151,3 +164,4 @@ def finalize_report(suite_path):
     
     # Clear any remaining tracking data
     _scenario_screenshot_start_index.clear()
+    _scenario_api_calls_start_index.clear()
