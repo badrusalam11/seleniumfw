@@ -444,95 +444,132 @@ class ReportGenerator:
         self.c.setFillColor(colors.black)
 
     def add_scenario_section(self, scenario_data):
-        # Ensure enough room
-        self._new_page_if_needed(200)
+            # Ensure enough room
+            self._new_page_if_needed(200)
 
-        # 1) Wrap the scenario title
-        full_width = self.width - 100    # 50px margin each side
-        text       = (f"Scenario: {scenario_data['scenario']} "
-                    f"({scenario_data['status']}, {scenario_data['duration']:.2f}s)")
-        wrapped    = self._wrap_text(text, full_width - 10, "Helvetica-Bold", 11)
-        line_h     = 14
-        stripe_h   = max(25, len(wrapped) * line_h + 10)  # Increased padding
+            # 1) Wrap the scenario title
+            full_width = self.width - 100    # 50px margin each side
+            text       = (f"Scenario: {scenario_data['scenario']} "
+                        f"({scenario_data['status']}, {scenario_data['duration']:.2f}s)")
+            wrapped    = self._wrap_text(text, full_width - 10, "Helvetica-Bold", 11)
+            line_h     = 14
+            stripe_h   = max(25, len(wrapped) * line_h + 10)  # Increased padding
 
-        # 2) Draw header stripe at current y
-        stripe_top = self.y
-        stripe_bottom = stripe_top - stripe_h
-        self.c.setFillColor(HexColor("#f4f4dc"))
-        self.c.rect(50, stripe_bottom, full_width, stripe_h, stroke=0, fill=1)
+            # 2) Draw header stripe at current y
+            stripe_top = self.y
+            stripe_bottom = stripe_top - stripe_h
+            self.c.setFillColor(HexColor("#f4f4dc"))
+            self.c.rect(50, stripe_bottom, full_width, stripe_h, stroke=0, fill=1)
 
-        # 3) Draw each wrapped line
-        self.c.setFillColor(colors.black)
-        self.c.setFont("Helvetica-Bold", 11)
-        text_x = 55
-        # start ~10px down from stripe_top
-        start_y = stripe_top - 12
-        for i, line in enumerate(wrapped):
-            self.c.drawString(text_x, start_y - i*line_h, line)
+            # 3) Draw each wrapped line
+            self.c.setFillColor(colors.black)
+            self.c.setFont("Helvetica-Bold", 11)
+            text_x = 55
+            # start ~10px down from stripe_top
+            start_y = stripe_top - 12
+            for i, line in enumerate(wrapped):
+                self.c.drawString(text_x, start_y - i*line_h, line)
 
-        # 4) Now move self.y BELOW the stripe (no padding - direct connection)
-        new_y = stripe_bottom
+            # 4) Now move self.y BELOW the stripe (no padding - direct connection)
+            self.y = stripe_bottom
 
-        # 5) Draw steps starting from new_y
-        box_width   = full_width
-        left_margin = 50
-        text_margin = 60
-        right_pad   = 15
+            # 5) Draw steps starting from current y
+            box_width   = full_width
+            left_margin = 50
+            text_margin = 60
+            right_pad   = 15
 
-        for step in scenario_data['steps']:
-            keyword = step['keyword']
-            name    = step['name']
-            dur_txt = f"{step['duration']:.2f}s"
+            for step in scenario_data['steps']:
+                keyword = step['keyword']
+                name    = step['name']
+                dur_txt = f"{step['duration']:.2f}s"
 
-            # calculate height & wrap
-            dur_w   = self.c.stringWidth(dur_txt, "Helvetica", 10)
-            avail_w = box_width - (text_margin - left_margin) - right_pad - dur_w - 20
-            lines   = self._wrap_text(f"{keyword} {name}", avail_w, "Helvetica", 10)
-            step_h  = max(25, len(lines) * line_h + 10)  # Increased minimum height
+                # calculate height & wrap
+                dur_w   = self.c.stringWidth(dur_txt, "Helvetica", 10)
+                avail_w = box_width - (text_margin - left_margin) - right_pad - dur_w - 20
+                lines   = self._wrap_text(f"{keyword} {name}", avail_w, "Helvetica", 10)
+                step_h  = max(25, len(lines) * line_h + 10)  # Increased minimum height
 
-            # page break if needed
-            self._new_page_if_needed(step_h + 5)
+                # page break if needed
+                self._new_page_if_needed(step_h + 5)
 
-            # draw step background
-            self.c.setFillColor(HexColor("#c7d98d"))
-            self.c.rect(left_margin, new_y - step_h, box_width, step_h, stroke=0, fill=1)
+                # draw step background
+                self.c.setFillColor(HexColor("#c7d98d"))
+                self.c.rect(left_margin, self.y - step_h, box_width, step_h, stroke=0, fill=1)
 
-            # draw text + bold keyword
-            y0 = new_y - 12
-            x0 = text_margin
+                # draw text + bold keyword
+                y0 = self.y - 12
+                x0 = text_margin
 
-            # first line: bold keyword
-            first = lines[0]
-            if first.startswith(keyword + " "):
-                self.c.setFont("Helvetica-Bold", 10)
-                self.c.setFillColor(colors.black)
-                self.c.drawString(x0, y0, keyword)
-                kw_w = self.c.stringWidth(keyword + " ", "Helvetica-Bold", 10)
+                # first line: bold keyword
+                first = lines[0]
+                if first.startswith(keyword + " "):
+                    self.c.setFont("Helvetica-Bold", 10)
+                    self.c.setFillColor(colors.black)
+                    self.c.drawString(x0, y0, keyword)
+                    kw_w = self.c.stringWidth(keyword + " ", "Helvetica-Bold", 10)
+                    self.c.setFont("Helvetica", 10)
+                    self.c.drawString(x0 + kw_w, y0, first[len(keyword)+1:])
+                else:
+                    self.c.setFont("Helvetica", 10)
+                    self.c.setFillColor(colors.black)
+                    self.c.drawString(x0, y0, first)
+
+                # additional lines
                 self.c.setFont("Helvetica", 10)
-                self.c.drawString(x0 + kw_w, y0, first[len(keyword)+1:])
-            else:
-                self.c.setFont("Helvetica", 10)
-                self.c.setFillColor(colors.black)
-                self.c.drawString(x0, y0, first)
+                for idx, ln in enumerate(lines[1:], start=1):
+                    self.c.drawString(text_margin, y0 - idx*line_h, ln)
 
-            # additional lines
-            self.c.setFont("Helvetica", 10)
-            for idx, ln in enumerate(lines[1:], start=1):
-                self.c.drawString(text_margin, y0 - idx*line_h, ln)
+                # duration at right
+                self.c.drawString(
+                    left_margin + box_width - right_pad - dur_w,
+                    y0,
+                    dur_txt
+                )
 
-            # duration at right
-            self.c.drawString(
-                left_margin + box_width - right_pad - dur_w,
-                y0,
-                dur_txt
-            )
-
-            # advance new_y
-            new_y -= step_h
-
-        # 6) Finally set self.y to new_y (no extra spacing - steps connect directly)
-        self.y = new_y - 5  # Minimal spacing for next section
-        self.c.setFillColor(colors.black)
+                # advance y position
+                self.y -= step_h
+                
+            # 6) Screenshots: Display AFTER all steps are complete
+            if scenario_data.get('screenshot'):
+                # Add some spacing before screenshots
+                self.y -= 10
+                
+                max_w = self.width - 100  # Define max_w for screenshots
+                max_h = 300
+                
+                for img_file in scenario_data['screenshot']:
+                    try:
+                        img_reader = ImageReader(img_file)
+                        iw, ih = img_reader.getSize()
+                        scale = min(max_w/iw, max_h/ih)
+                        w, h = iw*scale, ih*scale
+                        
+                        # Check if we need a new page for this screenshot
+                        self._new_page_if_needed(h + 30)
+                        
+                        x = 50  # Match left margin
+                        y_pos = self.y - h
+                        self.c.drawImage(img_reader, x, y_pos, width=w, height=h, preserveAspectRatio=True)
+                        self.y = y_pos - 20  # Add spacing after screenshot
+                        
+                    except Exception as e:
+                        # Handle image loading errors
+                        placeholder_h = 80
+                        self._new_page_if_needed(placeholder_h + 30)
+                        self.c.setFillColor(colors.lightgrey)
+                        self.c.rect(50, self.y - placeholder_h, max_w, placeholder_h, stroke=0, fill=1)
+                        # Add error text
+                        self.c.setFillColor(colors.red)
+                        self.c.setFont("Helvetica", 10)
+                        self.c.drawString(55, self.y - placeholder_h/2, f"Failed to load image: {os.path.basename(img_file)}")
+                        # Reset fill color and update position
+                        self.c.setFillColor(colors.black)
+                        self.y -= (placeholder_h + 20)
+            # 7) Add spacing before next scenario
+            self.y -= 15
+            self.c.setFillColor(colors.black)
+            
 
     METHOD_COLORS = {
         "GET":    HexColor("#61affe"),
@@ -619,14 +656,43 @@ class ReportGenerator:
             self.y -= (resp_h + 15)
             self._new_page_if_needed(50)
 
+
     def finalize(self, suite_path):
         suite_name = os.path.basename(suite_path)
+        
+        # 1. Add header
         self.add_header(suite_name)
+        
+        # 2. Add summary section
         self.add_summary_section()
-        self.add_testcase_table()  # ✅ FIRST: Test Case Table
+        
+        # 3. Add test case table (always first)
+        self.add_testcase_table()
 
-        # Screenshot-only summary when no cucumber scenarios
-        if not self.results and self.testcase_screenshots:
+        # 4. If we have cucumber results, add cucumber sections
+        if self.results:
+            # Add cucumber summary table
+            self.add_cucumber_summary_table()
+            
+            # Add detailed cucumber scenarios
+            self.y -= 20
+            self.add_section_title("Cucumber Detail", font_size=12, spacing=8)
+
+            # Group scenarios by feature and display them properly
+            current_feature = None
+            for item in self.results:
+                # Add feature header if this is a new feature
+                if item['feature'] != current_feature:
+                    if current_feature is not None:  # Add spacing between features
+                        self.y -= 20
+                    self.add_feature_section(item['feature'])
+                    current_feature = item['feature']
+                
+                # Add the scenario with its steps and screenshots
+                self.add_scenario_section(item)
+
+        # 5. Screenshot-only summary when no cucumber scenarios but we have screenshots
+        elif self.testcase_screenshots:
             self.c.showPage()
             self.current_page += 1
             self.y = self.height - 50
@@ -673,34 +739,31 @@ class ReportGenerator:
                 self.c.setFillColor(colors.black)
 
                 # Draw screenshot image below text
-                img_path = entry["screenshots"][-1]
-                img = ImageReader(img_path)
-                iw, ih = img.getSize()
-                max_w = col_widths[1]
-                max_h = 100
-                scale = min(max_w/iw, max_h/ih)
-                w, h = iw*scale, ih*scale
-                img_x = left + col_widths[0] + 5
-                img_y = y_top - line_h - h - 5
-                self.c.drawImage(img, img_x, img_y, width=w, height=h, preserveAspectRatio=True)
+                if entry["screenshots"]:
+                    img_path = entry["screenshots"][-1]
+                    try:
+                        img = ImageReader(img_path)
+                        iw, ih = img.getSize()
+                        max_w = col_widths[1]
+                        max_h = 100
+                        scale = min(max_w/iw, max_h/ih)
+                        w, h = iw*scale, ih*scale
+                        img_x = left + col_widths[0] + 5
+                        img_y = y_top - line_h - h - 5
+                        self.c.drawImage(img, img_x, img_y, width=w, height=h, preserveAspectRatio=True)
+                    except Exception:
+                        # Draw placeholder if image fails to load
+                        self.c.setFillColor(colors.lightgrey)
+                        self.c.rect(left + col_widths[0] + 5, y_top - line_h - 50, col_widths[1], 50, fill=1, stroke=0)
+                        self.c.setFillColor(colors.black)
 
                 self.y = y_top - line_h - 120 - 10    
-        # If we have cucumber results, add the detailed sections cucumber scenarios   
-        if self.results:
-            self.add_cucumber_summary_table()  # ✅ SECOND: Cucumber Scenario Table
 
-            self.y -= 20
-            self.add_section_title("Cucumber Detail", font_size=12, spacing=8)  # ✅ THIRD: Cucumber Detail
-
-            current_feature = None
-            for item in self.results:
-                if item['feature'] != current_feature:
-                    self.add_feature_section(item['feature'])
-                    current_feature = item['feature']
-                self.add_scenario_section(item)
+        # 6. Add API sections for each test case
         for case in (c["name"] for c in self.testcase_result):
             self.add_api_section_for_test_case(case)
         
+        # 7. Add footer and save
         self._add_footer()
         self.save_json()
         self.c.save()
