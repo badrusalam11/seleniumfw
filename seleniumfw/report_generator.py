@@ -431,7 +431,7 @@ class ReportGenerator:
         self._new_page_if_needed(stripe_height + 60)
         
         # Green feature header with wider margins
-        self.c.setFillColor(HexColor("#27ab33"))
+        self.c.setFillColor(HexColor("#4a90e2"))
         self.c.rect(50, self.y - stripe_height, full_width, stripe_height, stroke=0, fill=1)
         
         # White text on green background - wrapped
@@ -460,7 +460,11 @@ class ReportGenerator:
         # 2) Draw header stripe at current y
         stripe_top = self.y
         stripe_bottom = stripe_top - stripe_h
-        self.c.setFillColor(HexColor("#f4f4dc"))
+        if scenario_data['status'].lower() == "passed":
+            hex_background = "#f4f4dc"
+        else:
+            hex_background = "#f26f6f" 
+        self.c.setFillColor(HexColor(hex_background))
         self.c.rect(50, stripe_bottom, full_width, stripe_h, stroke=0, fill=1)
 
         # 3) Draw each wrapped line
@@ -496,7 +500,13 @@ class ReportGenerator:
             self._new_page_if_needed(step_h + 5)
 
             # draw step background
-            self.c.setFillColor(HexColor("#c7d98d"))
+            if step['status'].lower() == "passed":
+                hex_background = "#c7d98d"
+            elif step['status'].lower() == "failed":
+                hex_background = "#f5b0b0"
+            else: 
+                hex_background="#e3dede"
+            self.c.setFillColor(HexColor(hex_background))
             self.c.rect(left_margin, self.y - step_h, box_width, step_h, stroke=0, fill=1)
 
             # draw text + bold keyword

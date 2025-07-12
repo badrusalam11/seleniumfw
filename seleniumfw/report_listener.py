@@ -46,7 +46,15 @@ def before_test_case(case, data=None):
 def start_scenario_timer(context, scenario):
     _scenario_start[scenario.name] = time.time()
     _step_start[scenario.name] = 0
-    _steps_info[scenario.name] = []
+    _steps_info[scenario.name] = [
+        {
+            "keyword": getattr(step, "keyword", "STEP"),
+            "name": step.name,
+            "status": "SKIPPED",  # Default to SKIPPED
+            "duration": 0.0
+        }
+        for step in scenario.steps
+    ]
     
     # Record the current length of screenshots list as starting point for this scenario
     current_screenshots = get_context("screenshots") or []
@@ -69,12 +77,14 @@ def record_step_info(context, step):
     start = _step_start.get(scenario_name, time.time())
     duration = time.time() - start
     status = getattr(step.status, 'name', str(step.status)).upper()
-    _steps_info[scenario_name].append({
-        "keyword": getattr(step, "keyword", "STEP"),
-        "name": step.name,
-        "status": status,
-        "duration": round(duration, 2)
-    })
+
+    # Find and update matching step
+    for s in _steps_info[scenario_name]:
+        if s['name'] == step.name and s['status'] == 'SKIPPED':
+            s['status'] = status
+            s['duration'] = round(duration, 2)
+            break
+
 
 @AfterScenario
 def record_scenario_result(context, scenario):
