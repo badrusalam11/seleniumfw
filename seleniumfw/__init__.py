@@ -11,7 +11,9 @@ import yaml
 
 from .runner import Runner
 from .utils   import Logger
+from .config import Config
 
+config = Config()  # global singleton instance
 
 def run(target=None):
     logger = Logger.get_logger()
