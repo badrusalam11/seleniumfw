@@ -3,7 +3,7 @@ SeleniumFW - A lightweight Selenium framework with structured runner,
 report generator, and POM-based test execution. Inspired by Katalon.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 import sys
 from pathlib import Path

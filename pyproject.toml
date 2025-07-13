@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seleniumfw"
-version = "0.3.0"
+version = "0.3.1"
 description = "SeleniumFW - A minimal Selenium test framework that adapt POM"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,13 +13,16 @@ authors = [
   { name = "Muhamad Badru Salam", email = "badrusalam760@gmail.com" }
 ]
 dependencies = [
+  "selenium",
+  "python-dotenv",
+  "pyyaml",
+  "behave",
+  "reportlab",
   "typer[all]",
   "flask",
-  "pyyaml",
-  "apscheduler",
-  "jinja2",
   "requests",
-  "python-dotenv"
+  "jinja2",
+  "apscheduler",
 ]
 
 [project.scripts]
