@@ -1,22 +1,17 @@
-from seleniumfw.listener_manager import (
-    BeforeTestSuite,
-    AfterTestSuite,
-    BeforeTestCase,
-    AfterTestCase,
-)
+from seleniumfw.listener_manager import SetUp, Teardown, SetupTestCase, TeardownTestCase
 
-@BeforeTestSuite
-def before_suite(suite_path):
+@SetUp(skipped=True)
+def suite_init():
     pass
 
-@BeforeTestCase
-def before_case(context, scenario):
+@Teardown(skipped=True)
+def suite_clean():
     pass
 
-@AfterTestCase
-def after_case(context, scenario):
+@SetupTestCase(skipped=True)
+def case_init(case, data=None):
     pass
 
-@AfterTestSuite
-def after_suite(suite_path):
+@TeardownTestCase(skipped=True)
+def case_clean(case, data=None):
     pass
